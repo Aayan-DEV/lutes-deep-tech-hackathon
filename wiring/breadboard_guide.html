@@ -1,0 +1,474 @@
+<title>Tracker Wiring Steps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one step at a time. Big drawing of the two real justPi 400 boards on top, the step's
+   checklist beside it (below it on phones). Board art keeps its physical colours in both themes. */
+:root {
+  --bg: #eef2f1;
+  --panel: #ffffff;
+  --ink: #17201f;
+  --muted: #5c6a68;
+  --line: #d3dcda;
+  --accent: #1f8a87;          /* justPi packaging teal */
+  --accent-ink: #ffffff;
+  --done: #2e7d4f;
+  --font-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  /* board art: physical colours */
+  --board: #f7f6f1; --board-edge: #dcd9cf; --hole: #3a3a36; --groove: #e7e4da;
+  --rail-red: #d9465a; --rail-blue: #2f8fd6; --print: #2b2b28;
+  --w5v: #d62f3f; --wgnd: #26262a; --wsig: #2f9e4f; --wldr: #e0a400; --wsrv: #ef7b1a; --wcell: #7a4fd0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121817; --panel: #1b2322; --ink: #e8efed; --muted: #9db0ad; --line: #2c3836;
+    --accent: #3fb8b4; --accent-ink: #062322; --done: #5cc48a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121817; --panel: #1b2322; --ink: #e8efed; --muted: #9db0ad; --line: #2c3836;
+  --accent: #3fb8b4; --accent-ink: #062322; --done: #5cc48a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; margin: 0; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 14px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.5rem, 2.6vw, 2.1rem); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; font-size: 0.95rem; }
+nav.steps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+nav.steps button { font: 500 0.85rem var(--font-body); border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  border-radius: 999px; padding: 5px 12px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+nav.steps button .n { font-family: var(--font-mono); color: var(--muted); }
+nav.steps button[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+nav.steps button[aria-current="step"] .n { color: var(--accent-ink); }
+nav.steps button.checked .n::after { content: " ✓"; color: var(--done); }
+nav.steps button[aria-current="step"].checked .n::after { color: var(--accent-ink); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+@media (max-width: 980px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.art { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px; overflow-x: auto; }
+.art svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 16px; min-width: 0; }
+.eyebrow { font: 500 0.75rem var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.35rem; margin: 0 0 8px; text-wrap: balance; }
+.card p { margin: 0 0 10px; }
+ol.do { margin: 0 0 12px; padding-left: 0; list-style: none; display: grid; gap: 8px; counter-reset: d; }
+ol.do li { counter-increment: d; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; }
+ol.do li::before { content: counter(d); font: 500 0.78rem var(--font-mono); width: 22px; height: 22px; border-radius: 50%;
+  background: var(--bg); border: 1px solid var(--line); display: grid; place-items: center; margin-top: 1px; }
+.hole { font-family: var(--font-mono); font-size: 0.86em; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; white-space: nowrap; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; box-shadow: 0 0 0 1px #8a8a8a; margin-right: 4px; vertical-align: -1px; }
+.tip { border-top: 1px dashed var(--line); padding-top: 10px; margin-top: 4px; color: var(--muted); font-size: 0.9rem; }
+.tip strong { color: var(--ink); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; align-items: center; }
+.controls button { font: 600 0.9rem var(--font-body); border-radius: 10px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.controls button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.controls label { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; margin-left: auto; cursor: pointer; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 0.82rem; color: var(--muted); }
+table.pins { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 6px; }
+table.pins td { border-top: 1px solid var(--line); padding: 5px 4px; vertical-align: top; }
+table.pins td:first-child { font-family: var(--font-mono); white-space: nowrap; width: 72px; }
+@media (prefers-reduced-motion: no-preference) { .pulse { animation: pulse 1.4s ease-in-out infinite; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Wiring the solar tracker, one wire at a time</h1>
+    <p class="sub">One justPi 400 board and the Arduino UNO R4 WiFi, drawn the way they sit on your table.</p>
+  </header>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+  <nav class="steps" id="stepnav" aria-label="Sections"></nav>
+  <div class="grid">
+    <div class="art" id="art" aria-live="polite"></div>
+    <section class="card" id="card"></section>
+  </div>
+</div>
+
+<style>
+.progress { height: 6px; background: var(--line); border-radius: 99px; margin-bottom: 12px; overflow: hidden; }
+.progress .bar { height: 100%; background: var(--accent); border-radius: 99px; transition: width .2s; }
+.art svg { min-width: 900px; }
+.bignum { font: 700 2.6rem/1 var(--font-display); color: var(--accent); margin: 0 0 6px; }
+.what { font-size: 1.05rem; }
+.what .from, .what .to { display: block; margin: 6px 0; padding: 8px 10px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
+.what .k { font: 500 .72rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: block; }
+.plug { margin-top: 10px; }
+.plugbody { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; background: #1b1b1b; border-radius: 10px; padding: 8px; }
+.hole2 { display: grid; gap: 2px; justify-items: center; text-align: center; padding: 8px 4px; border-radius: 8px; color: #cfcfcf; font-size: .78rem; opacity: .45; }
+.hole2 b { color: #fff; font-size: .9rem; text-transform: capitalize; }
+.hole2 .sock { width: 18px; height: 18px; border-radius: 4px; }
+.hole2.on { opacity: 1; outline: 2px solid #fff; background: #2a2a2a; }
+.small { font-size: .8rem; color: var(--muted); margin: 6px 0 0; }
+.checkpoint { margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: 2px solid var(--accent); font-size: .95rem; }
+.checkpoint .k { display: block; font: 500 .72rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.kind { display: inline-flex; gap: 6px; align-items: center; font: 600 .85rem var(--font-body); padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); margin-bottom: 10px; }
+</style>
+
+<script>
+// ===== geometry =====
+const P = 18;
+const COL = { "L+": 18, "L-": 36, a: 74, b: 92, c: 110, d: 128, e: 146, f: 188, g: 206, h: 224, i: 242, j: 260, "R+": 298, "R-": 316 };
+const BW = 334, TOP = 76;
+const BX = { 1: 90 };
+const RAIL_ROWS = [1,2,3,4,5, 7,8,9,10,11, 13,14,15,16,17, 19,20,21,22,23, 25,26,27,28,29];
+const rowY = r => TOP + (r - 1) * P;
+function H(b, id) {
+  const m = id.match(/^([LR][+-]|[a-j])(\d+)$/);
+  const col = m[1], row = +m[2];
+  if (col.length === 2 && !RAIL_ROWS.includes(row)) throw new Error("no side-line hole at " + id);
+  return [BX[b] + COL[col], rowY(row)];
+}
+// Arduino UNO R4 WiFi, turned so the power/analog header faces the boards (USB on the right).
+// Pin x positions from Arduino's ABX00087 drawing (2.54 mm pitch), 5 drawing units per mm.
+const AX = 330, AY = 700, S = 5;
+const ax = bx => AX + (68.58 - bx) * S, ay = by => AY + by * S;
+const TOP_PINS = { IOREF: 30.48, RESET: 33.02, "3.3V": 35.56, "5V": 38.10, GND1: 40.64, GND2: 43.18, VIN: 45.72,
+                   A0: 50.8, A1: 53.34, A2: 55.88, A3: 58.42, A4: 60.96, A5: 63.5 };
+const BOT_PINS = { SCL: 18.796, SDA: 21.336, AREF: 23.876, GND3: 26.416, D13: 28.956, D12: 31.496, D11: 34.036, D10: 36.576,
+                   D9: 39.116, D8: 41.656, D7: 45.72, D6: 48.26, D5: 50.8, D4: 53.34, D3: 55.88, D2: 58.42, D1: 60.96, D0: 63.5 };
+function PIN(name) {
+  if (name in TOP_PINS) return [ax(TOP_PINS[name]), ay(2.54)];
+  return [ax(BOT_PINS[name]), ay(50.8)];
+}
+// off-board parts
+const LDR_X = 452;
+// Servos sit right of board 1 and take power from its side lines (proven by the LDRs).
+// sig/mid/gnd = the servo's OWN wire colours, in plug order: signal edge, power middle, ground edge.
+// Jumpers on the real build: orange on signal, red on middle, black on ground.
+const SERVO = {
+  pan:  { name: "Big servo", model: "MG996R", job: "pan, turns left and right", red: 19, brown: 20, pin: "D9",
+          lane: 830, yh: 1000, blane: 650, by: 640, bx: 48,
+          sig: ["yellow", "#e3b505"], mid: ["orange-red", "#e4572e"], gnd: ["brown", "#7b4a1e"] },
+  tilt: { name: "Small servo", model: "SG-90", job: "tilt, tips up and down", red: 25, brown: 26, pin: "D10",
+          lane: 820, yh: 990, blane: 640, by: 632, bx: 56,
+          sig: ["orange", "#ef7b1a"], mid: ["red", "#d62f3f"], gnd: ["brown", "#7b4a1e"] } };
+// hole positions in each plug drawing: signal edge, power middle, ground edge (same order as the real plug)
+const plugY = key => { const sv = SERVO[key], r = rowY(sv.red), b = rowY(sv.brown); return { o: r - (b - r), r, b }; };
+const PLUG_X = 700;
+const CELL = { x: 690, y: rowY(27.5), w: 110, h: 84 };
+
+// ===== the build, one action per step =====
+// sensor rows: chosen so the 4 Arduino wires never cross each other
+const SENS = [ { n: 4, r: 3,  pin: "A0", name: "bottom-right", lane: 600, yh: 690 },
+               { n: 3, r: 9,  pin: "A1", name: "bottom-left",  lane: 590, yh: 682 },
+               { n: 2, r: 15, pin: "A2", name: "top-right",    lane: 580, yh: 674 },
+               { n: 1, r: 21, pin: "A3", name: "top-left",     lane: 570, yh: 666 } ];
+const steps = [];
+const pt = (b, id) => H(b, id);
+function wire(o) { steps.push(Object.assign({ kind: "wire" }, o)); }
+function part(o) { steps.push(Object.assign({ kind: "part" }, o)); }
+
+steps.push({ kind: "intro", sec: "Start", title: "Know your boards" });
+// --- power board 1
+{ const [x, y] = pt(1, "R+1"), [px, py] = PIN("5V");
+  wire({ sec: "Power", title: "5V wire", type: "male–male", color: "w5v",
+    from: "Arduino <b>5V</b> pin", to: "Board 1, <span class='hole'>R+1</span>: red line on the right, beside row 1",
+    path: [[x, y], [608, y], [608, 700], [px, 700], [px, py]] }); }
+{ const [x, y] = pt(1, "L-27"), [px, py] = PIN("GND1");
+  wire({ sec: "Power", title: "GND wire", type: "male–male", color: "wgnd",
+    from: "Arduino <b>GND</b> pin (next to 5V)", to: "Board 1, <span class='hole'>L−27</span>: blue line on the left, beside row 27",
+    path: [[x, y], [70, y], [70, 650], [px, 650], [px, py]] }); }
+// --- sensors: resistors, then Arduino wires, then LDR legs
+for (const s of SENS) part({ sec: "Resistors", title: `Resistor for LDR ${s.n}`, type: "10 kΩ (brown-black-orange)", res: [1, `a${s.r}`, `L-${s.r}`, "10k"],
+  from: `One leg in <span class='hole'>a${s.r}</span>`, to: `Other leg in <span class='hole'>L−${s.r}</span> (blue line right next to it)` });
+for (const s of SENS) { const [x, y] = pt(1, `e${s.r}`), [px, py] = PIN(s.pin);
+  wire({ sec: "Arduino wires", title: `Wire to ${s.pin}`, type: "male–male", color: "wsig",
+    from: `Board 1, <span class='hole'>e${s.r}</span>`, to: `Arduino <b>${s.pin}</b>`, note: `This row is LDR ${s.n}, the ${s.name} sensor.`,
+    path: [[x, y], [s.lane, y], [s.lane, s.yh], [px, s.yh], [px, py]] }); }
+for (const s of SENS) {
+  const [cx, cy] = pt(1, `c${s.r}`), [rx, ry] = pt(1, `R+${s.r + 1}`);
+  const ly = rowY(s.r + 1.25);
+  wire({ sec: "LDRs", title: `LDR ${s.n}, first leg`, type: "female–male", color: "wldr", ldr: [s.n, ly],
+    from: `Female end onto one LDR ${s.n} leg (${s.name})`, to: `Male end into board 1, <span class='hole'>c${s.r}</span>`,
+    note: "An LDR has no + or − side. Either leg can go first.",
+    path: [[LDR_X - 8, rowY(s.r + 1.5)], [cx, rowY(s.r + 1.5)], [cx, cy]] });
+  wire({ sec: "LDRs", title: `LDR ${s.n}, second leg`, type: "female–male", color: "w5v", ldr: [s.n, ly],
+    from: `Female end onto the other LDR ${s.n} leg`, to: `Male end into board 1, <span class='hole'>R+${s.r + 1}</span> (red line on the right)`,
+    path: [[LDR_X - 8, ry], [rx, ry]] });
+}
+// --- servos: 3 jumpers each. Red and black go to board 1's side lines, orange goes to the Arduino.
+steps.push({ kind: "servos", sec: "Servos", title: "The 6 servo wires at a glance", showServos: true });
+for (const key of ["pan", "tilt"]) {
+  const sv = SERVO[key], P = plugY(key), who = `${sv.name} (${sv.model})`;
+  const [rx, ry] = pt(1, `R+${sv.red}`), [bx, by] = pt(1, `L-${sv.brown}`), [px, py] = PIN(sv.pin);
+  wire({ sec: "Servos", title: `${sv.name}, wire 1 of 3: the RED jumper`, type: "red jumper, one end already on the servo plug", color: "w5v", servo: key, hole: "mid",
+    from: `The <b>red</b> jumper on the ${who}. Its one end sits on the servo's <b>middle</b> wire (${sv.mid[0]}). Leave that end where it is.`,
+    to: `Push its other end into board 1, <span class='hole'>R+${sv.red}</span>: the <b>red line on the right</b>, next to column j. Any free hole on that red line works.`,
+    note: `This is the servo's power (+5V). On the ${sv.model} the middle wire is ${sv.mid[0]}. The middle wire is always power, whatever its colour.`,
+    path: [[PLUG_X, ry], [rx, ry]] });
+  wire({ sec: "Servos", title: `${sv.name}, wire 2 of 3: the BLACK jumper`, type: "black jumper, one end already on the servo plug", color: "wgnd", servo: key, hole: "gnd",
+    from: `The <b>black</b> jumper on the ${who}. Its one end sits on the servo's <b>brown</b> edge wire. Leave that end where it is.`,
+    to: `Push its other end into board 1, <span class='hole'>L−${sv.brown}</span>: the <b>blue line on the left</b>, next to column a. Any free hole on that blue line works.`,
+    note: "This is ground (the way back for the current). If this end is in an Arduino pin right now, pull it out and move it here. Without it the servo gets no power at all.",
+    path: [[PLUG_X, by], [sv.blane, by], [sv.blane, sv.by], [sv.bx, sv.by], [sv.bx, by], [bx, by]] });
+  wire({ sec: "Servos", title: `${sv.name}, wire 3 of 3: the ORANGE jumper`, type: "orange jumper, one end already on the servo plug", color: "wsrv", servo: key, hole: "sig",
+    from: `The <b>orange</b> jumper on the ${who}. Its one end sits on the servo's <b>${sv.sig[0]}</b> edge wire. Leave that end where it is.`,
+    to: `Push its other end into Arduino <b>${sv.pin}</b> (the long pin row, marked <b>~${sv.pin.slice(1)}</b>).`,
+    note: key === "pan"
+      ? "This is the signal (the instructions, no power). On the MG996R the signal wire is YELLOW. Its orange-red wire is power and must never go into D9."
+      : "This is the signal (the instructions, no power). On the SG-90 the signal wire is orange. Only this wire touches the Arduino.",
+    path: [[PLUG_X + 16, P.o], [sv.lane, P.o], [sv.lane, sv.yh], [px, sv.yh], [px, py]] });
+}
+// --- solar cell on board 1 rows 25 to 29, measured by the Arduino on A4 (no wattmeter)
+part({ sec: "Solar cell", title: "Load resistor", type: "220 Ω (red-red-brown)", res: [1, "a25", "L-25", "220"], cell: true,
+  from: "One leg in board 1 <span class='hole'>a25</span>", to: "Other leg in <span class='hole'>L−25</span> (blue line right next to it)",
+  note: "The solar cell's power flows through this resistor. The Arduino works out the power from the voltage across it." });
+part({ sec: "Solar cell", title: "Divider, top resistor", type: "10 kΩ (brown-black-orange)", res: [1, "d25", "d29", "10k"], cell: true,
+  from: "One leg in <span class='hole'>d25</span>", to: "Other leg in <span class='hole'>d29</span> (4 rows down, same column)",
+  note: "With the next resistor this halves the cell's voltage, so the Arduino pin never sees more than about 3.3 V, even in full sun." });
+part({ sec: "Solar cell", title: "Divider, bottom resistor", type: "10 kΩ (brown-black-orange)", res: [1, "a29", "L-29", "10k"], cell: true,
+  from: "One leg in <span class='hole'>a29</span>", to: "Other leg in <span class='hole'>L−29</span> (blue line right next to it)" });
+{ const [x, y] = pt(1, "e29"), [px, py] = PIN("A4");
+  wire({ sec: "Solar cell", title: "Wire to A4", type: "male–male", color: "wcell", cell: true,
+    from: "Board 1, <span class='hole'>e29</span>", to: "Arduino <b>A4</b> (next to A3)",
+    path: [[x, y], [x, 698], [px, 698], [px, py]] }); }
+wire({ sec: "Solar cell", title: "Solar cell red", type: "the cell's own red wire", color: "wcellr", cell: true,
+  from: "Solar cell <b>red</b> wire", to: "Board 1, <span class='hole'>e25</span>",
+  note: "Push the bare end in firmly. If it is too thin to hold, twist it round a male jumper's pin and tape it.",
+  curve: [pt(1, "e25"), [CELL.x, CELL.y + 18]] });
+wire({ sec: "Solar cell", title: "Solar cell black", type: "the cell's own black wire", color: "wgnd", cell: true,
+  from: "Solar cell <b>black</b> wire", to: "Board 1, <span class='hole'>L−28</span> (blue line on the left)",
+  curve: [pt(1, "L-28"), [CELL.x, CELL.y + 54]] });
+steps.push({ kind: "outro", sec: "Check", title: "Check everything" });
+// what build_check.ino should print after each section (plug in USB, open Serial Monitor at 9600)
+const CHECKPOINTS = {
+  "Power": "Nothing to check yet: the Arduino can only see a wire once it reaches A0–A3. Keep going.",
+  "Resistors": "Still nothing to check yet. Keep going.",
+  "Arduino wires": "Check now: upload <b>firmware/tracker/tracker.ino</b>, open the console (Live, Connect). Each LDR row shows a reading, not a dash.",
+  "LDRs": "Check now in the console: all four LDRs show a tick and a light %. Cover one with a finger: only its % drops.",
+  "Solar cell": "Check now in the console: the Solar cell card shows volts, mA and mW. Shine the torch on the cell: the mW goes up.",
+  "Servos": "Check now: the power bank or console should show the servos drawing power (more than 0.5 W). In the console press <b>Test servos</b>: tilt sweeps, then pan spins each way."
+};
+steps.forEach((s, k) => { const nx = steps[k + 1]; if (CHECKPOINTS[s.sec] && (!nx || nx.sec !== s.sec)) s.checkpoint = CHECKPOINTS[s.sec]; });
+
+// ===== drawing =====
+const NS = "http://www.w3.org/2000/svg";
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function el(tag, a, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in a) e.setAttribute(k, a[k]);
+  if (text != null) e.textContent = text;
+  parent && parent.appendChild(e);
+  return e;
+}
+const WC = { w5v: "#d62f3f", wgnd: "#2a2a2e", wsig: "#2f9e4f", wldr: "#e0a400", wsrv: "#ef7b1a", wcell: "#7a4fd0", wcellr: "#d62f3f" };
+
+function board(svg, b, title) {
+  const X = BX[b], h = rowY(30) - TOP + 40;
+  el("rect", { x: X, y: TOP - 30, width: BW, height: h + 18, rx: 8, fill: "#f7f6f1", stroke: "#dcd9cf", "stroke-width": 2 }, svg);
+  el("rect", { x: X + 160, y: TOP - 8, width: 14, height: h - 12, rx: 3, fill: "#e7e4da" }, svg);
+  el("text", { x: X + BW / 2, y: TOP - 42, "text-anchor": "middle", "font-family": css("--font-display"), "font-weight": 700, "font-size": 15, fill: css("--ink") }, svg, title);
+  const y1 = TOP - 10, y2 = rowY(30) + 10;
+  [[8, "#d9465a"], [46, "#2f8fd6"], [288, "#d9465a"], [326, "#2f8fd6"]].forEach(([dx, c]) => el("line", { x1: X + dx, y1, x2: X + dx, y2, stroke: c, "stroke-width": 2 }, svg));
+  [["+", 18, "#d9465a"], ["−", 36, "#2f8fd6"], ["+", 298, "#d9465a"], ["−", 316, "#2f8fd6"]].forEach(([t, dx, c]) =>
+    el("text", { x: X + dx, y: TOP - 16, "text-anchor": "middle", "font-size": 13, "font-weight": 700, fill: c }, svg, t));
+  for (const c of "abcdefghij") el("text", { x: X + COL[c], y: TOP - 15, "text-anchor": "middle", "font-family": css("--font-mono"), "font-size": 11, fill: "#2b2b28" }, svg, c);
+  for (let r = 1; r <= 30; r++) {
+    el("text", { x: X + 64, y: rowY(r) + 3.5, "text-anchor": "end", "font-family": css("--font-mono"), "font-size": 8.5, fill: "#2b2b28" }, svg, r);
+    el("text", { x: X + 268, y: rowY(r) + 3.5, "font-family": css("--font-mono"), "font-size": 8.5, fill: "#2b2b28" }, svg, r);
+    for (const c of "abcdefghij") el("rect", { x: X + COL[c] - 2.6, y: rowY(r) - 2.6, width: 5.2, height: 5.2, fill: "#3a3a36" }, svg);
+  }
+  for (const r of RAIL_ROWS) for (const c of ["L+", "L-", "R+", "R-"])
+    el("rect", { x: X + COL[c] - 2.6, y: rowY(r) - 2.6, width: 5.2, height: 5.2, fill: "#3a3a36" }, svg);
+}
+function arduino(svg, hot) {
+  const w = 68.58 * S, h = 53.34 * S;
+  el("rect", { x: AX, y: AY, width: w, height: h, rx: 12, fill: "#1f6f8b", stroke: "#15546a", "stroke-width": 2 }, svg);
+  el("rect", { x: ax(5.94), y: ay(33.1), width: 6.8 * S, height: 9.54 * S, rx: 4, fill: "#b8bec4" }, svg);         // USB-C
+  el("rect", { x: ax(12.44), y: ay(3.46), width: 14.4 * S, height: 9.4 * S, rx: 3, fill: "#222" }, svg);           // power jack
+  el("text", { x: AX + w / 2 - 30, y: AY + h / 2, "text-anchor": "middle", "font-family": css("--font-display"), "font-weight": 700, "font-size": 20, fill: "#ffffff" }, svg, "UNO R4 WiFi");
+  el("text", { x: AX + w / 2 - 30, y: AY + h / 2 + 18, "text-anchor": "middle", "font-family": css("--font-mono"), "font-size": 10, fill: "#cfe6ee" }, svg, "USB-C on the right →");
+  const header = (pins, by, labelBelow) => {
+    const xs = Object.values(pins).map(ax);
+    el("rect", { x: Math.min(...xs) - 7, y: ay(by) - 7, width: Math.max(...xs) - Math.min(...xs) + 14, height: 14, rx: 2, fill: "#151515" }, svg);
+    for (const [name, bx] of Object.entries(pins)) {
+      const x = ax(bx), y = ay(by), on = hot.has(name);
+      el("rect", { x: x - 3, y: y - 3, width: 6, height: 6, fill: on ? "#ffd166" : "#555" }, svg);
+      const t = name.replace(/GND\d/, "GND");
+      const ty = labelBelow ? y + 12 : y - 12;
+      el("text", { x, y: ty, transform: `rotate(-90 ${x} ${ty})`, "text-anchor": labelBelow ? "end" : "start", "dominant-baseline": "central",
+        "font-family": css("--font-mono"), "font-size": 8.5, "font-weight": on ? 700 : 500, fill: on ? "#ffd166" : "#e5f1f5" }, svg, t);
+    }
+  };
+  header(TOP_PINS, 2.54, true);
+  header(BOT_PINS, 50.8, false);
+}
+function ldrIcon(svg, n, y, hot) {
+  const g = el("g", { opacity: hot ? 1 : 0.35 }, svg);
+  el("line", { x1: LDR_X - 8, y1: y - 4, x2: LDR_X, y2: y - 4, stroke: "#999", "stroke-width": 1.5 }, g);
+  el("line", { x1: LDR_X - 8, y1: y + 5, x2: LDR_X, y2: y + 5, stroke: "#999", "stroke-width": 1.5 }, g);
+  el("circle", { cx: LDR_X + 9, cy: y, r: 9, fill: "#f3d9b0", stroke: "#b9772e", "stroke-width": 1.5 }, g);
+  el("path", { d: `M${LDR_X + 3},${y - 4} h12 M${LDR_X + 3},${y} h12 M${LDR_X + 3},${y + 4} h12`, stroke: "#b9772e", "stroke-width": 1 }, g);
+  el("text", { x: LDR_X + 24, y: y + 4, "font-family": css("--font-body"), "font-size": 11, "font-weight": 600, fill: css("--ink") }, g, `LDR ${n}`);
+}
+function servoIcon(svg, key, hot) {
+  const sv = SERVO[key], g = el("g", { opacity: hot ? 1 : 0.35 }, svg), P = plugY(key);
+  const top = P.o - 9, bot = P.b + 9, mono = { "font-family": css("--font-mono"), "font-size": 9, fill: css("--ink") };
+  el("rect", { x: PLUG_X, y: top, width: 16, height: bot - top, rx: 3, fill: "#1b1b1b" }, g);
+  [[sv.sig[1], P.o], [sv.mid[1], P.r], [sv.gnd[1], P.b]].forEach(([c, yy]) => el("rect", { x: PLUG_X + 4, y: yy - 4, width: 8, height: 8, rx: 1.5, fill: c }, g));
+  // signal leaves on the right, power and ground leave on the left, so each label sits where no wire runs
+  el("text", Object.assign({ x: PLUG_X - 4, y: P.o + 3.5, "text-anchor": "end" }, mono), g, `${sv.sig[0]} · signal`);
+  el("text", Object.assign({ x: PLUG_X + 22, y: P.r + 3.5 }, mono), g, `${sv.mid[0]} · +5V`);
+  el("text", Object.assign({ x: PLUG_X + 22, y: P.b + 3.5 }, mono), g, `${sv.gnd[0]} · GND`);
+  el("text", { x: PLUG_X - 4, y: top - 8, "font-family": css("--font-body"), "font-size": 11, "font-weight": 700, fill: css("--ink") }, g, `${sv.name} · ${sv.model} plug`);
+}
+function cellIcon(svg, hot) {
+  const g = el("g", { opacity: hot ? 1 : 0.35 }, svg);
+  el("rect", { x: CELL.x, y: CELL.y, width: CELL.w, height: CELL.h, rx: 3, fill: "#16181f", stroke: "#444", "stroke-width": 1 }, g);
+  for (let i = 1; i < 4; i++) el("line", { x1: CELL.x + i * CELL.w / 4, y1: CELL.y + 4, x2: CELL.x + i * CELL.w / 4, y2: CELL.y + CELL.h - 4, stroke: "#2c3a66", "stroke-width": 1 }, g);
+  el("text", { x: CELL.x + CELL.w / 2, y: CELL.y + CELL.h + 14, "text-anchor": "middle", "font-family": css("--font-body"), "font-size": 11, "font-weight": 600, fill: css("--ink") }, g, "Solar cell 0.7 W");
+}
+function drawWire(svg, st, state) {
+  const col = WC[st.color], g = el("g", { opacity: state === "old" ? 0.28 : 1 }, svg);
+  let d;
+  if (st.curve) { const [[x1, y1], [x2, y2]] = st.curve; d = `M${x1},${y1} C${x1 + 60},${y1 + 46} ${x2 - 60},${y2 + 46} ${x2},${y2}`; }
+  else d = "M" + st.path.map(p => p.join(",")).join(" L");
+  el("path", { d, fill: "none", stroke: css("--panel"), "stroke-width": 7, "stroke-linecap": "round", "stroke-linejoin": "round" }, g);   // halo so crossings read clearly
+  el("path", { d, fill: "none", stroke: col, "stroke-width": state === "new" ? 4.2 : 3.2, "stroke-linecap": "round", "stroke-linejoin": "round" }, g);
+  const ends = st.curve ? st.curve : [st.path[0], st.path[st.path.length - 1]];
+  ends.forEach(([x, y]) => el("circle", { cx: x, cy: y, r: state === "new" ? 5 : 4, fill: col, stroke: "#fff", "stroke-width": 1.4, class: state === "new" ? "pulse" : "" }, g));
+}
+function drawRes(svg, st, state) {
+  const [b, from, to, label] = st.res, [x1, y1] = H(b, from), [x2, y2] = H(b, to);
+  const g = el("g", { opacity: state === "old" ? 0.28 : 1 }, svg);
+  el("line", { x1, y1, x2, y2, stroke: "#8c8c86", "stroke-width": 2 }, g);
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, vertical = Math.abs(y2 - y1) > Math.abs(x2 - x1);
+  const body = el("g", { transform: vertical ? `rotate(90 ${mx} ${my})` : "" }, g);
+  el("rect", { x: mx - 10, y: my - 5, width: 20, height: 10, rx: 4, fill: "#cfe0ec", stroke: "#6c8aa0", "stroke-width": 1 }, body);
+  const bands = label === "220" ? ["#c0392b", "#c0392b", "#7b4a1e"] : ["#7b4a1e", "#111", "#e67e22"];
+  bands.forEach((c, i) => el("rect", { x: mx - 6 + i * 4.5, y: my - 5, width: 2.4, height: 10, fill: c }, body));
+  [[x1, y1], [x2, y2]].forEach(([x, y]) => el("circle", { cx: x, cy: y, r: state === "new" ? 4.6 : 3.4, fill: "#8c8c86", class: state === "new" ? "pulse" : "" }, g));
+  if (state === "new") {
+    const tx = vertical ? mx + 40 : mx, ty = vertical ? my + 4 : my - 14.5;
+    el("rect", { x: tx - 26, y: ty - 11.5, width: 52, height: 16, rx: 8, fill: css("--panel"), stroke: css("--accent"), "stroke-width": 1.5 }, g);
+    el("text", { x: tx, y: ty, "text-anchor": "middle", "font-family": css("--font-body"), "font-size": 10.5, "font-weight": 600, fill: css("--ink") }, g, label === "220" ? "220 Ω" : "10 kΩ");
+  }
+}
+function introMarks(svg) {
+  const X = BX[1], hl = css("--accent");
+  el("rect", { x: X + COL.a - 9, y: rowY(6) - 8, width: COL.e - COL.a + 18, height: 16, rx: 8, fill: "none", stroke: hl, "stroke-width": 2.4 }, svg);
+  el("rect", { x: X + COL.f - 9, y: rowY(6) - 8, width: COL.j - COL.f + 18, height: 16, rx: 8, fill: "none", stroke: hl, "stroke-width": 2.4, "stroke-dasharray": "4 3" }, svg);
+  el("rect", { x: X + COL["L-"] - 8, y: rowY(1) - 9, width: 16, height: rowY(29) - rowY(1) + 18, rx: 8, fill: "none", stroke: hl, "stroke-width": 2.4 }, svg);
+}
+function hotPins(st) {
+  if (!st || st.kind !== "wire") return new Set();
+  const m = (st.to + st.from).match(/Arduino <b>([^<]+)<\/b>/);
+  if (!m) return new Set();
+  const n = m[1].trim();
+  if (n === "GND") return new Set(["GND1"]);
+  return new Set([n]);
+}
+function render(i) {
+  const st = steps[i], art = document.getElementById("art");
+  art.innerHTML = "";
+  const W = 900, Ht = 1030;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${Ht}`, role: "img", "aria-label": `Step ${i + 1}: ${st.title}` }, art);
+  board(svg, 1, "Board 1");
+  arduino(svg, hotPins(st));
+  const upto = steps.slice(0, i + 1);
+  // off-board parts appear once a step uses them
+  const ldrs = new Map();
+  upto.forEach((s, k) => { if (s.ldr) ldrs.set(s.ldr[0], [s.ldr[1], k === i]); });
+  for (const [n, [y, hot]] of ldrs) ldrIcon(svg, n, y, hot || st.kind === "outro");
+  for (const key of ["pan", "tilt"]) if (upto.some(s => s.servo === key || s.showServos)) servoIcon(svg, key, st.servo === key || st.showServos || st.kind === "outro");
+  if (upto.some(s => s.cell)) cellIcon(svg, st.cell || st.kind === "outro");
+  if (st.kind === "intro") introMarks(svg);
+  upto.forEach((s, k) => {
+    const state = k === i ? "new" : (st.kind === "outro" ? "all" : "old");
+    if (s.kind === "wire") drawWire(svg, s, state);
+    if (s.kind === "part") drawRes(svg, s, state);
+  });
+  renderCard(i);
+  document.getElementById("bar").style.width = `${(i + 1) / steps.length * 100}%`;
+  document.querySelectorAll("#stepnav button").forEach(b => b.setAttribute("aria-current", b.dataset.sec === st.sec ? "step" : "false"));
+  try { localStorage.setItem("wiring-step3", String(i)); } catch (e) {}
+}
+
+// ===== text panel =====
+const PIN_MAP = [["5V", "Board 1 R+1 (feeds the LDRs and both servos)"], ["GND", "Board 1 L−27 (the GND next to 5V)"],
+  ["A0", "Board 1 e3 (LDR 4)"], ["A1", "Board 1 e9 (LDR 3)"], ["A2", "Board 1 e15 (LDR 2)"], ["A3", "Board 1 e21 (LDR 1)"],
+  ["A4", "Board 1 e29 (solar cell, through the divider)"],
+  ["D9", "Big servo: orange jumper (on its yellow wire)"], ["D10", "Small servo: orange jumper (on its orange wire)"],
+  ["R+19, L−20", "Big servo: red jumper, black jumper"], ["R+25, L−26", "Small servo: red jumper, black jumper"]];
+// one row per servo jumper: [plug hole, jumper colour, jumper hex, destination]
+const servoRows = key => { const sv = SERVO[key]; return [
+  ["sig", "orange", "#ef7b1a", `Arduino <b>${sv.pin}</b>`],
+  ["mid", "red", "#d62f3f", `Board 1 <span class='hole'>R+${sv.red}</span> (red line, right)`],
+  ["gnd", "black", "#2a2a2e", `Board 1 <span class='hole'>L−${sv.brown}</span> (blue line, left)`]]; };
+const HOLE_INFO = { sig: ["edge", "signal"], mid: ["MIDDLE", "+5V power"], gnd: ["edge", "ground"] };
+// The real servo plug, drawn big: three holes in their real order, the one for this step highlighted.
+function plugDiagram(st) {
+  const sv = SERVO[st.servo];
+  return `<div class="plug"><div class="plugbody">${servoRows(st.servo).map(([h, jn, jc, to]) =>
+    `<div class="hole2${h === st.hole ? " on" : ""}"><span class="sock" style="background:${sv[h][1]}"></span><b>${sv[h][0]} wire</b>
+      <span>${HOLE_INFO[h][0]} · ${HOLE_INFO[h][1]}</span><span><span class="sw" style="background:${jc}"></span>${jn} jumper</span><span>→ ${to.replace(/<[^>]+>/g, "")}</span></div>`).join("")}</div>
+    <p class="small">The ${sv.name.toLowerCase()}'s plug (${sv.model}), seen from the front. The bright hole is this step.</p></div>`;
+}
+function servoTable() {
+  return ["pan", "tilt"].map(key => { const sv = SERVO[key]; return `
+    <p style="margin:12px 0 4px"><b>${sv.name} (${sv.model})</b>: ${sv.job}</p>
+    <table class="pins">${servoRows(key).map(([h, jn, jc, to]) =>
+      `<tr><td><span class="sw" style="background:${jc}"></span>${jn}</td><td>on the servo's <b>${sv[h][0]}</b> wire (${HOLE_INFO[h][0].toLowerCase()}) → ${to}</td></tr>`).join("")}</table>`; }).join("");
+}
+function renderCard(i) {
+  const st = steps[i], card = document.getElementById("card");
+  let body;
+  if (st.kind === "intro") body = `
+    <p>Unplug the USB cable while you wire. Lay board 1 and the Arduino out like the drawing: board 1 on the left, the Arduino below it with its USB port on the right, the servo plugs to the right of the board. You only need this one breadboard.</p>
+    <ol class="do">
+      <li><span>Holes <span class='hole'>a</span> to <span class='hole'>e</span> in one row are joined (solid box). <span class='hole'>f</span> to <span class='hole'>j</span> are joined too (dashed box). The groove splits them.</span></li>
+      <li><span>Each side has a red <b>+</b> line and a blue <b>−</b> line. All 25 holes on one line are joined, across the gaps between the groups of 5.</span></li>
+      <li><span><span class='hole'>L+</span> = red line far left, <span class='hole'>L−</span> = blue line next to a, <span class='hole'>R+</span> = red line next to j, <span class='hole'>R−</span> = blue line far right. <span class='hole'>L−27</span> means the blue-line hole beside row 27.</span></li>
+    </ol>
+    <p class="tip">Each step adds <strong>one</strong> wire or part. The new one glows; everything before it fades.</p>`;
+  else if (st.kind === "servos") body = `
+    <p>You have 6 jumpers on the two servo plugs: 3 on each. Their plug ends stay where they are. Only the <b>other</b> ends move, one per step.</p>
+    ${servoTable()}
+    <p class="tip">Simple rule for both servos: <b>red</b> jumper → red line on the right. <b>Black</b> jumper → blue line on the left. <b>Orange</b> jumper → Arduino (D9 big, D10 small). Nothing else goes into the Arduino.</p>`;
+  else if (st.kind === "outro") body = `
+    <p>Plug in the USB cable and upload <b>firmware/tracker/tracker.ino</b>. Open the console, press <b>Connect</b>, then <b>Test servos</b>. All four LDRs should show green, and both servos should move. No wattmeter is needed.</p>
+    <table class="pins">${PIN_MAP.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("")}</table>`;
+  else body = `
+    <span class="kind"><span class="sw" style="background:${st.kind === "part" ? "#cfe0ec" : WC[st.color]}"></span>${st.type}</span>
+    <div class="what">
+      <span class="from"><span class="k">${st.kind === "part" ? "Leg 1" : "From"}</span>${st.from}</span>
+      <span class="to"><span class="k">${st.kind === "part" ? "Leg 2" : "To"}</span>${st.to}</span>
+    </div>
+    ${st.hole ? plugDiagram(st) : ""}
+    ${st.note ? `<p class="tip">${st.note}</p>` : ""}
+    ${st.checkpoint ? `<div class="checkpoint"><span class="k">End of “${st.sec}” · check in the console</span>${st.checkpoint}</div>` : ""}`;
+  card.innerHTML = `
+    <p class="eyebrow">${st.sec} · step ${i + 1} of ${steps.length}</p>
+    <h2>${st.title}</h2>
+    ${body}
+    <div class="controls">
+      <button id="prev" ${i === 0 ? "disabled" : ""}>Back</button>
+      <button id="next" class="primary">${i === steps.length - 1 ? "Start over" : "Done, next"}</button>
+    </div>
+    <p class="tip">Tip: the arrow keys also move between steps.</p>`;
+  document.getElementById("prev").onclick = () => go(i - 1);
+  document.getElementById("next").onclick = () => go(i === steps.length - 1 ? 0 : i + 1);
+}
+function buildNav() {
+  const nav = document.getElementById("stepnav");
+  const secs = [...new Set(steps.map(s => s.sec))];
+  for (const sec of secs) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.sec = sec;
+    const n = steps.filter(s => s.sec === sec).length;
+    b.innerHTML = `${sec}<span class="n">${n > 1 ? n : ""}</span>`;
+    b.onclick = () => go(steps.findIndex(s => s.sec === sec));
+    nav.appendChild(b);
+  }
+}
+let cur = 0;
+try { const v = +localStorage.getItem("wiring-step3"); if (v >= 0 && v < steps.length) cur = v; } catch (e) {}
+function go(n) { cur = Math.max(0, Math.min(steps.length - 1, n)); render(cur); }
+document.addEventListener("keydown", e => { if (e.key === "ArrowRight") go(cur + 1); if (e.key === "ArrowLeft") go(cur - 1); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => render(cur));
+buildNav();
+go(cur);
+</script>
