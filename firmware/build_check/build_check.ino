@@ -285,6 +285,17 @@ const unsigned long DUST_CONFIRM_MS = 2000;   // and it stays low for 2 s with t
 const unsigned long CLEAN_HOLD_MS = 1500, CLEAN_MEASURE_MS = 500;
 const int CLEAN_ROUNDS = 3;
 const float CLEAN_DONE = 0.85;           // done as soon as the total is back over 85 % of the clean level
+// One blocked light (prototype; Oct 11): something lands on one corner (a leaf, sand, paper). The total
+// hardly drops, but that light falls while the other three stay: then stop tracking (it would turn away
+// from the "dark" side), confirm for DUST_CONFIRM_MS, and run the same tilting routine. Each light's
+// recent level (cb) follows it with CORNER_FOLLOW_MS while all is well. Blocked: under CORNER_DROP of
+// its recent level (which was at least CORNER_MIN), with every other light at CORNER_KEEP of its own or
+// more. Cancelled if it comes back over CORNER_BACK (a hand passing) or the others change (the light
+// moved). Clean: measured at home, its share against the other three is back to CLEAN_DONE of what it
+// was before. Still covered after CLEAN_ROUNDS: "needs a hand", and tracking goes on without it.
+const float CORNER_DROP = SUN_MODE ? 0 : 0.5;   // 0 = off (the sun build)
+const float CORNER_KEEP = 0.8, CORNER_KEEP_HOLD = 0.6, CORNER_BACK = 0.8, CORNER_MIN = 0.8;
+const float CORNER_FOLLOW_MS = 3000;
 enum { CL_IDLE, CL_BLOCKED, CL_CLEANING, CL_HELP };   // 0 idle, 1 blocked, 2 cleaning, 3 needs a hand
 
 float level[4], room[4], rel[4];
@@ -326,6 +337,9 @@ int turnWay = 0;
 // Dust watch and cleaning (same names as logic.js)
 int clState = CL_IDLE;
 float clBase = 0, clTotal = 0;
+int clCorner = -1;                       // the one blocked light (CORNER_DROP), -1 = none
+float cb[4] = {0, 0, 0, 0};              // each light's recent level (rel)
+float crRatio0 = 0, crSum = 0;           // that light's share before it was blocked; its sum while measuring
 unsigned long clHighAt = 0, clSince = 0, clPhaseAt = 0;
 int clRound = 0, clStep = 0, clFirst = 0;   // clStep: 0 first end, 1 other end, 2 back home, 3 going home to finish
 bool clOk = false;
@@ -381,7 +395,7 @@ void readSensors() {
   }
   if (!SUN_MODE) checkDead();
   for (int i = 0; i < 4; i++) {
-    healthy[i] = room[i] > RAIL_LOW && room[i] < RAIL_HIGH && !dead[i];
+    healthy[i] = room[i] > RAIL_LOW && room[i] < RAIL_HIGH && !dead[i] && !(clState == CL_HELP && clCorner == i);   // a light still covered after cleaning is left out
     rel[i] = conductance(level[i]) / conductance(room[i]);   // 1.0 = room light
     float up = rel[i] - 1;
     if (healthy[i] && up > best && level[i] - room[i] >= TORCH_MIN_COUNTS) best = up;
@@ -605,8 +619,49 @@ void restHome(unsigned long now) {
 }
 
 // Dust watch, after both axes and the lost check (normal tracking only).
+// One light's share: its rel against the mean of the other healthy lights (1 = the same as them).
+float cornerRatio(int i) {
+  float sum = 0; int n = 0;
+  for (int j = 0; j < 4; j++) if (j != i && healthy[j]) { sum += rel[j]; n++; }
+  return n ? rel[i] / max(sum / n, 0.01f) : 1;
+}
+bool othersSteady(int i, float k) {
+  int n = 0;
+  for (int j = 0; j < 4; j++) if (j != i && healthy[j]) { if (rel[j] < k * cb[j]) return false; n++; }
+  return n >= 2;
+}
+// CORNER_DROP: true when it handled this update (a blocked light, or one that still needs a hand).
+bool watchCorner(unsigned long now, bool light) {
+  if (clCorner >= 0) {
+    int i = clCorner;
+    if (clState == CL_BLOCKED) {
+      if (!light || rel[i] >= CORNER_BACK * cb[i] || !othersSteady(i, CORNER_KEEP_HOLD)) { clState = CL_IDLE; clCorner = -1; return true; }
+      if (now - clSince >= DUST_CONFIRM_MS) startClean(now);   // the motors are held still meanwhile (control)
+      return true;
+    }
+    if (clState == CL_HELP) {   // clears by itself once that light is back in line with the others
+      if (cornerRatio(i) >= CLEAN_DONE * crRatio0) { clState = CL_IDLE; clCorner = -1; }
+      return true;
+    }
+    if (clState == CL_IDLE) clCorner = -1;
+  }
+  if (clState != CL_IDLE) return false;
+  for (int i = 0; i < 4; i++) cb[i] += (rel[i] - cb[i]) * UPDATE_MS / CORNER_FOLLOW_MS;
+  if (!light) return false;
+  for (int i = 0; i < 4; i++) {
+    if (!healthy[i] || cb[i] < CORNER_MIN || rel[i] >= CORNER_DROP * cb[i] || !othersSteady(i, CORNER_KEEP)) continue;
+    float sum = 0; int n = 0;
+    for (int j = 0; j < 4; j++) if (j != i && healthy[j]) { sum += cb[j]; n++; }
+    clState = CL_BLOCKED; clSince = now; clCorner = i;
+    crRatio0 = cb[i] / max(sum / n, 0.01f);
+    return true;
+  }
+  return false;
+}
+
 void watchDust(unsigned long now) {
   bool light = torch || steering;   // light present: a torch, or enough light to steer by
+  if (CORNER_DROP > 0 && watchCorner(now, light)) return;   // one blocked light: handled there
   if (clBase <= 0) {   // first light: start the clean level here
     if (light && clTotal > 0) { clBase = clTotal; clHighAt = now; }
     return;
@@ -634,7 +689,7 @@ void watchDust(unsigned long now) {
 }
 
 float sideAngle(int side) { return side == 0 ? tiltMax() : tiltMin(); }
-void cleanGo(float target, unsigned long now) { clTarget = target; clPhaseAt = now; clSum = 0; clCount = 0; }
+void cleanGo(float target, unsigned long now) { clTarget = target; clPhaseAt = now; clSum = 0; clCount = 0; crSum = 0; }
 
 void startClean(unsigned long now) {
   if (clBase <= 0) clBase = clTotal;
@@ -648,7 +703,7 @@ void startClean(unsigned long now) {
 // Back to normal tracking (state: CL_IDLE, or CL_HELP if the light did not come back).
 void endClean(int state) {
   clState = state;
-  if (state == CL_IDLE) clRound = 0;
+  if (state == CL_IDLE) { clRound = 0; clCorner = -1; }
   stopAxis(PAN); stopAxis(TILT);
   seeking = false; lostSince = 0; lockStrength = strongest;
 }
@@ -656,7 +711,7 @@ void endClean(int state) {
 // "D 0": stop the routine and forget the clean level (it starts again from the next light).
 void cancelClean() {
   if (clState == CL_CLEANING) endClean(CL_IDLE);
-  clState = CL_IDLE; clBase = 0; clRound = 0;
+  clState = CL_IDLE; clBase = 0; clRound = 0; clCorner = -1;
 }
 
 // One update of the cleaning routine (instead of normal tracking). Pan stays stopped; tilt moves at
@@ -673,9 +728,12 @@ void cleanStep(unsigned long now) {
   unsigned long held = now - clPhaseAt;
   if (held < CLEAN_HOLD_MS) return;
   clSum += clTotal; clCount++;
+  if (clCorner >= 0) crSum += cornerRatio(clCorner);
   if (held < CLEAN_HOLD_MS + CLEAN_MEASURE_MS) return;
   float m = clSum / clCount;
-  if (m >= CLEAN_DONE * clBase) {   // the light is back: go home and stop
+  // one blocked light: judged at home only (tilted, the light falls differently on each corner)
+  bool back = clCorner >= 0 ? clStep == 2 && crSum / clCount >= CLEAN_DONE * crRatio0 : m >= CLEAN_DONE * clBase;
+  if (back) {   // the light is back: go home and stop
     clOk = true; clStep = 3; cleanGo(clHome, now);
     return;
   }
@@ -702,6 +760,7 @@ void control(unsigned long now) {
   bool holding = (long)(now - holdUntil) < 0;
   if (clState == CL_CLEANING) cleanStep(now);
   else if (holding) { stopAxis(PAN); stopAxis(TILT); }   // just started, or a new front: hold still
+  else if (clState == CL_BLOCKED && clCorner >= 0) { stopAxis(PAN); stopAxis(TILT); watchDust(now); }   // one light blocked: stop, confirm
   else {
     updateAxis(PAN, now);
     updateAxis(TILT, now);
@@ -945,6 +1004,7 @@ void sendTelemetry(unsigned long now) {
   Serial.print(",\"base\":"); Serial.print((long)lround(clBase * 100));
   Serial.print(",\"now\":"); Serial.print((long)lround(clTotal * 100));
   Serial.print(",\"round\":"); Serial.print(clRound);
+  Serial.print(",\"cn\":"); Serial.print(clCorner);
   Serial.print("}");
   float cellMa = cellV / CELL_LOAD_OHM * 1000.0;
   Serial.print(",\"cell\":{\"v\":"); Serial.print(cellV, 2);
