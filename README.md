@@ -7,7 +7,7 @@ Our project for the LUTES Deep Tech Hackathon 2026 (demo day: 11 October 2026).
 - **Demo videos:**
   1. [submission/tracker_demo.mp4](submission/tracker_demo.mp4) (25 s): the light demo. The real tracker follows a torch around.
   2. [submission/tracker_demo_2.mp4](submission/tracker_demo_2.mp4) (29 s): the snow demo. White flakes land on one corner of the panel; the tracker tilts to drop them off, then goes back to the light.
-- **Pitch deck:** shown live at the pitch
+- **Pitch:** our pitch is the dashboard's Story mode (run the dashboard, then press Story). It is in this repo under `dashboard/js/story/`.
 
 ![The 3D printing step](dashboard/media/IMG_6999.jpg)
 
