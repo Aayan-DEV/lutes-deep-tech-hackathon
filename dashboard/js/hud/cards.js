@@ -57,9 +57,10 @@ export function createCards(root, { onDust }) {
   }
 
   function dustCard(v) {
-    const cl = v.dust || { st: 0 }, words = v.cleanAgain && cl.st === 0 ? "Clean again" : cl.st === 1 ? "Something is blocking the lights"
-      : cl.st === 2 ? `Cleaning: rocking back and forth, round ${Math.max(1, cl.round || 1)}`
-      : cl.st === 3 ? "Needs a hand" : cl.dirty || "Clean";
+    const cl = v.dust || { st: 0 }, corner = ["top left", "top right", "bottom left", "bottom right"][cl.cn];   // cn: one blocked light (Live)
+    const words = v.cleanAgain && cl.st === 0 ? "Clean again" : cl.st === 1 ? (corner ? `Something is on the ${corner} light: stopped` : "Something is blocking the lights")
+      : cl.st === 2 ? (corner ? `Tilting to drop it off the ${corner} light, round ${Math.max(1, cl.round || 1)}` : `Cleaning: rocking back and forth, round ${Math.max(1, cl.round || 1)}`)
+      : cl.st === 3 ? (corner ? `Needs a hand: the ${corner} light is still covered` : "Needs a hand") : cl.dirty || "Clean";
     const kind = cl.st === 2 ? "move" : cl.st === 1 || cl.st === 3 ? "look" : cl.dirty && !v.cleanAgain ? "" : "good";
     setHTML($("dustBody"), badge(words, kind));
     $("dustBtn").hidden = v.mode !== "live";

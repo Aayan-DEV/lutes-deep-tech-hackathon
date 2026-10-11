@@ -99,7 +99,9 @@ export const CFG = {
   // Cleaning: rock the tilt end to end and watch which side helps. Each round: one end, the other
   // end, then back to where it was. Hold 1.5 s at each stop, then average the total over 0.5 s.
   CLEAN_HOLD_MS: 1500, CLEAN_MEASURE_MS: 500, CLEAN_ROUNDS: 3,
-  CLEAN_DONE: 0.85,         // done as soon as the total is back over 85 % of the clean level
+  CLEAN_DONE: 0.85,
+  // one blocked light (tracker.ino CORNER_*; prototype only, 0 = off in the sun build)
+  CORNER_DROP: 0.5, CORNER_KEEP: 0.8, CORNER_KEEP_HOLD: 0.6, CORNER_BACK: 0.8, CORNER_MIN: 0.8, CORNER_FOLLOW_MS: 3000,         // done as soon as the total is back over 85 % of the clean level
 };
 
 // The sun simulation's numbers: tracker.ino's SUN_MODE block. createController(Object.assign({}, CFG, SUN_MODE_CFG)).
@@ -108,7 +110,7 @@ export const CFG = {
 export const SUN_MODE_CFG = Object.freeze({
   SUN_MODE: true, TILT_MIN: 90, TILT_MAX: 180, TILT_FULL_STEP: 5.0, TILT_SLOW_STEP: 0.3,
   PAN_LIMIT_DEG: 170, PAN_FULL_US: 500, START_PCT: 10, STOP_PCT: 3, TURN_AROUND: true,
-  FULL_PCT: 40, PAN_SLOW_US: 100, SETTLE_MS: 0, UNWIND: false, START_HOLD_MS: 0, REST_MS: 0,
+  FULL_PCT: 40, PAN_SLOW_US: 100, SETTLE_MS: 0, UNWIND: false, START_HOLD_MS: 0, REST_MS: 0, CORNER_DROP: 0,
 });
 
 export const TL = 0, TR = 1, BL = 2, BR = 3, PAN = 0, TILT = 1;
@@ -153,6 +155,7 @@ export function createController(c = CFG) {
     cellV: 0, tiltRev: false,   // tiltRev: tilt servo mounted the other way round ("R 1")
     panRev: false,              // panRev: big motor turns the other way round ("Q 1"): its pulse is flipped
     // dust watch and cleaning (same names as tracker.ino, without the "s.")
+    clCorner: -1, cb: [0, 0, 0, 0], crRatio0: 0, crSum: 0,   // one blocked light
     clState: CL_IDLE, clBase: 0, clTotal: 0, clHighAt: 0, clSince: 0, clRound: 0, clStep: 0, clFirst: 0, clOk: false,
     clHome: c.TILT_UP, clTarget: c.TILT_UP, clPhaseAt: 0, clSum: 0, clCount: 0, clSide: [0, 0], clPrev: [0, 0],
   };
@@ -179,7 +182,7 @@ export function createController(c = CFG) {
     }
     if (!c.SUN_MODE) checkDead();
     for (let i = 0; i < 4; i++) {
-      s.healthy[i] = s.room[i] > c.RAIL_LOW && s.room[i] < c.RAIL_HIGH && !s.dead[i];
+      s.healthy[i] = s.room[i] > c.RAIL_LOW && s.room[i] < c.RAIL_HIGH && !s.dead[i] && !(s.clState === CL_HELP && s.clCorner === i);   // a light still covered after cleaning is left out
       s.rel[i] = conductance(s.level[i]) / conductance(s.room[i]);   // 1.0 = room light
       const up = s.rel[i] - 1;
       if (s.healthy[i] && up > strongest && s.level[i] - s.room[i] >= c.TORCH_MIN_COUNTS) strongest = up;
@@ -447,6 +450,7 @@ export function createController(c = CFG) {
       const holding = now - s.holdUntil < 0;
       if (s.clState === CL_CLEANING) cleanStep(now);
       else if (holding) { stopAxis(PAN); stopAxis(TILT); }   // just started, or a new front: hold still
+      else if (s.clState === CL_BLOCKED && s.clCorner >= 0) { stopAxis(PAN); stopAxis(TILT); watchDust(now); }   // one light blocked: stop, confirm
       else {
         updateAxis(PAN, now);
         updateAxis(TILT, now);
@@ -474,7 +478,7 @@ export function createController(c = CFG) {
                 ang: r1(s.angle), cap: Math.round(s.cap[1] * 100) },
         sk: s.seeking ? 1 : 0,
         cell: { v: Math.round(s.cellV * 100) / 100, ma: r1(cellMa), mw: r1(s.cellV * cellMa) },
-        cl: { st: s.clState, base: Math.round(s.clBase * 100), now: Math.round(s.clTotal * 100), round: s.clRound },
+        cl: { st: s.clState, base: Math.round(s.clBase * 100), now: Math.round(s.clTotal * 100), round: s.clRound, cn: s.clCorner },
         cfg: { start: c.START_PCT, stop: c.STOP_PCT, full: c.FULL_PCT, dir: c.DIR.slice(), pdps: c.PAN_DEG_PER_S, up: c.TILT_UP, rev: s.tiltRev ? 1 : 0, prev: s.panRev ? 1 : 0, kst: s.panStartUs },
       };
     },
