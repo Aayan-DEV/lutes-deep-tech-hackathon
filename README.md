@@ -4,7 +4,7 @@ Our project for the LUTES Deep Tech Hackathon 2026 (demo day: 11 October 2026).
 
 - **Team name:** Wise Guys
 - **Track:** Challenge 02, dual-axis solar tracker
-- **Demo video:** [submission/tracker_demo.mp4](submission/tracker_demo.mp4) (25 s: the real tracker following a torch)
+- **Demo videos:** [submission/tracker_demo.mp4](submission/tracker_demo.mp4) (25 s: the real tracker following a torch) and [submission/tracker_demo_2.mp4](submission/tracker_demo_2.mp4) (29 s: a second run on the real tracker)
 - **Pitch deck:** shown live at the pitch
 
 ![The 3D printing step](dashboard/media/IMG_6999.jpg)

@@ -24,7 +24,9 @@ https://github.com/Aayan-DEV/lutes-deep-tech-hackathon
 
 A low-cost dual-axis solar tracker. Four light sensors at the corners of a small solar panel tell an Arduino UNO R4 WiFi where the light is. A big continuous servo (MG996R) turns the panel and a small servo (SG-90) tilts it until all four sensors see the same light. A 0.7 W solar cell is measured so we can see the gain. On the real board the tracker can detect dust and rock the panel back and forth to clean it. A browser dashboard shows a 3D model of the real build and has three modes: Story, Simulation (real hourly weather from 2023 to 2025 at three places) and Live (the real board over Web Serial, with a guided Sync up calibration and session logs).
 
-Demo video (the real tracker following a torch): https://github.com/Aayan-DEV/lutes-deep-tech-hackathon/blob/main/submission/tracker_demo.mp4
+Demo videos (the real tracker following a torch):
+- https://github.com/Aayan-DEV/lutes-deep-tech-hackathon/blob/main/submission/tracker_demo.mp4
+- https://github.com/Aayan-DEV/lutes-deep-tech-hackathon/blob/main/submission/tracker_demo_2.mp4
 
 ### ⚙️ Tech Stack Used
 
