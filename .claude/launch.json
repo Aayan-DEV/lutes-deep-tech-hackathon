@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tracker-dashboard",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "dashboard/serve.py",
+        "8766"
+      ],
+      "port": 8766
+    }
+  ]
+}

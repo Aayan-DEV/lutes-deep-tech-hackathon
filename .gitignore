@@ -1,0 +1,17 @@
+context/book/build/
+context/_v1/build/
+.env
+dashboard/logs/
+
+# Private event notes (contain the venue Wi-Fi password). Never commit.
+context/
+
+# macOS and Python clutter
+.DS_Store
+**/.DS_Store
+__pycache__/
+*.pyc
+
+# Machine-specific Claude Code settings
+.claude/settings.local.json
+.claude/*.local.*
