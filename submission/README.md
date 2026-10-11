@@ -1,5 +1,5 @@
 # Submission files
 
 1. `ISSUE.md`: the text of our submission issue.
-2. `tracker_demo.mp4`: demo video, 25 s, the real tracker following a torch.
-3. `tracker_demo_2.mp4`: second demo video, 29 s, a second run on the real tracker.
+2. `tracker_demo.mp4`: the light demo, 25 s: the real tracker follows a torch around.
+3. `tracker_demo_2.mp4`: the snow demo, 29 s: white flakes land on one corner, the tracker tilts to drop them off, then goes back to the light.
