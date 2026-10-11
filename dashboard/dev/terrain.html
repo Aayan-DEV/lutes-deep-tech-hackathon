@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Terrain test</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #e8eaee; font: 13px/1.3 Inter, system-ui, sans-serif; color: #1f2933; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .panel { position: fixed; left: 12px; top: 12px; background: rgba(255,255,255,0.92); border: 1px solid #d5d9e0; border-radius: 4px; padding: 10px 12px; width: 250px; }
+  .row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  button { font: inherit; border: 1px solid #c9ced6; background: #fff; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+  button[aria-pressed="true"] { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+  label { display: grid; grid-template-columns: 70px 1fr 38px; align-items: center; gap: 6px; margin: 4px 0; }
+  input[type=range] { width: 100%; accent-color: #f59e0b; }
+  .fps { position: fixed; right: 12px; top: 12px; background: rgba(255,255,255,0.92); border: 1px solid #d5d9e0; border-radius: 4px; padding: 6px 10px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="panel">
+  <div class="row" id="regions"></div>
+  <label>Sun height <input id="el" type="range" min="-10" max="90" step="0.5" value="35"><span id="elV"></span></label>
+  <label>Sun dir <input id="az" type="range" min="0" max="360" step="1" value="135"><span id="azV"></span></label>
+  <label>Cloud <input id="cloud" type="range" min="0" max="1" step="0.01" value="0"><span id="cloudV"></span></label>
+  <label>Dust <input id="dust" type="range" min="0" max="1" step="0.01" value="0"><span id="dustV"></span></label>
+  <label>Wind <input id="wind" type="range" min="0" max="20" step="0.5" value="4"><span id="windV"></span></label>
+  <div class="row"><button id="rain" aria-pressed="false">Rain</button></div>
+</div>
+<div class="fps" id="fps">-- fps</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module">
+import { createTerrain } from "../js/scene/terrain.js";
+import { createSky } from "../js/scene/sky.js";
+import { createProps } from "../js/scene/props.js";
+import { REGION_IDS, REGION_LOOK } from "../js/scene/regions.js";
+
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(1.5, devicePixelRatio));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 2, 20000);
+camera.position.set(170, 75, 240);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.target.set(0, 18, 0); controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.495; controls.minDistance = 40; controls.maxDistance = 3000;
+
+const terrain = createTerrain(scene);
+const sky = createSky(scene, renderer);
+const props = createProps(scene, terrain);
+
+// stand-in for the tracker: a 30 by 20 cm wooden base and a post with a panel
+const box = new THREE.Group();
+const wood = new THREE.MeshStandardMaterial({ color: 0x9a6a3c, roughness: 0.8 });
+const base = new THREE.Mesh(new THREE.BoxGeometry(30, 3, 20), wood); base.position.y = 1.5;
+const post = new THREE.Mesh(new THREE.BoxGeometry(3, 25, 3), new THREE.MeshStandardMaterial({ color: 0x4a5560 })); post.position.y = 15;
+const panel = new THREE.Mesh(new THREE.BoxGeometry(22, 1, 16), new THREE.MeshStandardMaterial({ color: 0x1f3a5c, roughness: 0.4, metalness: 0.2 }));
+panel.position.y = 28; panel.rotation.x = -0.5;
+for (const m of [base, post, panel]) { m.castShadow = true; m.receiveShadow = true; box.add(m); }
+scene.add(box);
+
+const $ = id => document.getElementById(id);
+const state = { region: "cholistan", el: 35, az: 135, cloud: 0, dust: 0, wind: 4, rain: false };
+const regBox = $("regions");
+for (const id of REGION_IDS) {
+  const b = document.createElement("button"); b.textContent = REGION_LOOK[id].name.split(" ")[0]; b.dataset.id = id;
+  b.onclick = () => setRegion(id); regBox.appendChild(b);
+}
+function setRegion(id) {
+  state.region = id;
+  terrain.setRegion(id); props.setRegion(id); sky.setRegion(id);
+  for (const b of regBox.children) b.setAttribute("aria-pressed", b.dataset.id === id);
+  apply();
+}
+function apply() {
+  sky.setSun(state.el, state.az);
+  terrain.setSun(sky.sunDir, state.el);
+  const kind = state.rain ? "rain" : state.dust > 0.35 ? "dust" : state.cloud > 0.85 ? "overcast" : state.cloud > 0.3 ? "cloudy" : "clear";
+  sky.setWeather({ cloud: state.cloud, dust: state.dust, kind, rh: state.rain ? 85 : 30 });
+  const a = 45 * Math.PI / 180;   // wind blowing toward the north-east
+  props.setWind(new THREE.Vector3(Math.sin(a) * state.wind, 0, -Math.cos(a) * state.wind));
+  $("elV").textContent = state.el; $("azV").textContent = state.az;
+  $("cloudV").textContent = state.cloud; $("dustV").textContent = state.dust; $("windV").textContent = state.wind;
+}
+for (const k of ["el", "az", "cloud", "dust", "wind"]) $(k).oninput = e => { state[k] = +e.target.value; apply(); };
+$("rain").onclick = () => { state.rain = !state.rain; $("rain").setAttribute("aria-pressed", state.rain); apply(); };
+
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener("resize", resize); resize();
+
+// optional start state from the address: ?region=thar&el=5&az=100&cloud=0.2&dust=0
+const qs = new URLSearchParams(location.search);
+for (const k of ["el", "az", "cloud", "dust", "wind"]) if (qs.has(k)) { state[k] = +qs.get(k); $(k).value = state[k]; }
+if (qs.get("rain") === "1") { state.rain = true; $("rain").setAttribute("aria-pressed", "true"); }
+if (qs.has("cam")) { const [x, y, z, tx, ty, tz] = qs.get("cam").split(",").map(Number); camera.position.set(x, y, z); controls.target.set(tx, ty, tz); }
+setRegion(qs.get("region") || "cholistan");
+
+let last = performance.now(), frames = 0, fpsT = last;
+const stats = { fps: 0 };
+function loop(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  controls.update(); sky.frame(dt); terrain.frame(dt); props.frame(dt);
+  renderer.render(scene, camera);
+  frames++;
+  if (t - fpsT > 500) { stats.fps = Math.round(frames * 1000 / (t - fpsT)); $("fps").textContent = stats.fps + " fps, " + renderer.info.render.calls + " draws"; frames = 0; fpsT = t; }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+window.__dev = { state, apply, setRegion, renderer, camera, controls, stats, terrain, sky, props };
+</script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #e9edf2; font: 13px/1.4 Inter, system-ui, sans-serif; color: #1f2933; }
+  canvas { display: block; }
+  .box { position: fixed; background: #ffffffee; border: 1px solid #d5dbe2; border-radius: 4px; padding: 10px 12px; }
+  #ctl { top: 12px; left: 12px; width: 330px; display: grid; gap: 8px; }
+  #ctl label { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  #ctl input[type=range] { flex: 1; accent-color: #f59e0b; }
+  select, button { font: inherit; border: 1px solid #c7cfd8; border-radius: 4px; background: #fff; padding: 3px 8px; }
+  button.on { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+  #info { top: 12px; right: 12px; width: 250px; white-space: pre; font-variant-numeric: tabular-nums; }
+  #fps { bottom: 12px; right: 12px; font-variant-numeric: tabular-nums; }
+  #date { font-weight: 600; font-size: 15px; }
+</style>
+</head>
+<body>
+<div id="ctl" class="box">
+  <div id="date">loading</div>
+  <label>Place <select id="region"><option value="cholistan">Cholistan</option><option value="thar">Thar</option><option value="gobi">Gobi</option></select>
+    <button id="play">Play</button></label>
+  <label>Date <input id="slider" type="range" min="0" max="26303" step="1" value="0"></label>
+  <label>Interesting day <select id="events"></select></label>
+  <label>Show <select id="force"><option value="">real weather</option><option>none</option><option>rain</option><option>snow</option><option>hail</option><option>dust</option><option value="leaves">Leaves</option></select></label>
+  <label>Strength <input id="strength" type="range" min="0" max="1" step="0.01" value="1"></label>
+  <label>Wind m/s <input id="wind" type="range" min="0" max="20" step="0.5" value="8"></label>
+  <label>Panel tip <input id="tilt" type="range" min="0" max="80" step="1" value="30"></label>
+</div>
+<div id="info" class="box"></div>
+<div id="fps" class="box">fps</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module">
+import { loadWeather, windVec, particleKind } from "../js/weather/weather.js";
+import { pickEvents } from "../js/weather/events.js";
+import { createParticles } from "../js/scene/particles.js";
+
+const $ = id => document.getElementById(id);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(1.5, devicePixelRatio));
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const sky = new THREE.Color(0xcfe0ef), sandHaze = new THREE.Color(0xd8b98c);
+scene.background = sky.clone();
+scene.fog = new THREE.Fog(sky.clone(), 300, 2000);
+const camera = new THREE.PerspectiveCamera(45, 1, 1, 5000);
+camera.position.set(95, 60, 140);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 20, 0); controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0xc8a878, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(100, 200, 150); scene.add(sun);
+
+// flat sand, a post and a tilted panel facing south (+z)
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshLambertMaterial({ color: 0xd9c19a }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+const post = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.6, 15, 16), new THREE.MeshLambertMaterial({ color: 0xf6a04d }));
+post.position.y = 7.5; scene.add(post);
+const pivot = new THREE.Group(); pivot.position.set(0, 16, 0); scene.add(pivot);
+const panel = new THREE.Mesh(new THREE.BoxGeometry(10.4, 0.4, 10.4), new THREE.MeshLambertMaterial({ color: 0x2f62c9 }));
+pivot.add(panel);
+const marks = [0, 1, 2, 3].map(q => {   // a small square per quadrant that goes sandy as hits add up
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), new THREE.MeshBasicMaterial({ color: 0xc49a62, transparent: true, opacity: 0 }));
+  m.rotation.x = -Math.PI / 2; m.position.set(q % 2 === 0 ? 2.6 : -2.6, 0.22, q < 2 ? 2.6 : -2.6); panel.add(m); return m;
+});
+const setTilt = deg => { pivot.rotation.x = deg * Math.PI / 180; };   // tips the top toward +z (south)
+
+const _n = new THREE.Vector3(), _c = new THREE.Vector3(), _l = new THREE.Vector3();
+function panelSurface() {
+  panel.updateWorldMatrix(true, false);   // parents too, so a tilt set between renders counts
+  _c.setFromMatrixPosition(panel.matrixWorld).addScaledVector(_n.set(0, 1, 0).transformDirection(panel.matrixWorld), 0.2);
+  return {
+    center: _c, normal: _n, halfW: 5.2, halfH: 5.2,
+    quadrantOf(p) {   // TL, TR, BL, BR as in the tracker model: TL at local +x +z
+      panel.worldToLocal(_l.copy(p));
+      if (Math.abs(_l.x) > 5.2 || Math.abs(_l.z) > 5.2) return -1;
+      return (_l.z >= 0 ? 0 : 2) + (_l.x >= 0 ? 0 : 1);
+    },
+  };
+}
+
+const totals = { water: [0, 0, 0, 0], snow: [0, 0, 0, 0], dust: [0, 0, 0, 0], leaves: [0, 0, 0, 0] };
+const fx = createParticles(scene, { panelSurface, onDeposit: (kind, q, amount) => { totals[kind][q] += amount; } });
+setInterval(() => console.log("deposits per quadrant (TL TR BL BR):", JSON.stringify(totals, (k, v) => (typeof v === "number" ? Math.round(v * 100) / 100 : v))), 5000);
+
+let series = null, events = [], hourF = 0, playing = false, lastShown = "";
+async function loadRegion(id) {
+  series = await loadWeather(id);
+  $("region").value = id;
+  events = pickEvents(series);
+  $("slider").max = series.hours - 1;
+  $("events").innerHTML = `<option value="">pick one</option>` + events.map(e => `<option value="${e.date}">${e.date} ${e.title}</option>`).join("");
+  show();
+}
+const dateAt = h => new Date(series.start.getTime() + h * 3600e3);
+const local = d => new Date(d.getTime() + series.utcOffsetS * 1000).toISOString().slice(0, 16).replace("T", " ");
+
+function show() {
+  if (!series) return;
+  const d = dateAt(hourF), s = series.at(d), force = $("force").value;
+  let kind, intensity, wind;
+  if (force) {
+    kind = force; intensity = +$("strength").value;
+    const r = +$("wind").value; wind = { x: r * 0.8, y: 0, z: r * 0.6 };
+  } else {
+    ({ kind, intensity } = particleKind(s)); wind = windVec(s);
+  }
+  fx.set(kind, intensity, wind);
+  const haze = force ? (force === "dust" ? intensity : 0) : (s.kind === "dust" ? s.dust : 0);
+  scene.background.copy(sky).lerp(sandHaze, haze * 0.8);
+  scene.fog.color.copy(scene.background); scene.fog.near = 300 - 250 * haze; scene.fog.far = 2000 - 1700 * haze;
+  const txt = [`${series.name}`, `kind      ${s.kind}${force ? `  (showing ${force})` : ""}`,
+    `temp      ${s.temp.toFixed(1)} C`, `rain      ${s.rain.toFixed(1)} mm per h`, `snow      ${s.snow.toFixed(2)} cm per h`,
+    `cloud     ${Math.round(s.cloud * 100)} %`, `sun       ${Math.round(s.ghi)} W per m2 (beam ${Math.round(s.dni)}, sky ${Math.round(s.dhi)})`,
+    `wind      ${s.wind.toFixed(1)} m/s from ${Math.round(s.windDir)}, gusts ${s.gust.toFixed(1)}`, `humidity  ${Math.round(s.rh)} %`,
+    `dust      ${s.dust.toFixed(2)}`, `code      ${s.code}`, `particles ${kind} ${intensity.toFixed(2)}`].join("\n");
+  if (txt !== lastShown) { $("info").textContent = txt; lastShown = txt; }
+  $("date").textContent = `${local(d)} local`;
+}
+
+$("region").onchange = e => loadRegion(e.target.value);
+$("slider").oninput = e => { hourF = +e.target.value; show(); };
+$("play").onclick = () => { playing = !playing; $("play").textContent = playing ? "Pause" : "Play"; $("play").classList.toggle("on", playing); };
+$("events").onchange = e => {
+  if (!e.target.value) return;
+  const days = series.days(), i = days.findIndex(d => d.date === e.target.value);
+  // jump to the most eventful hour of that day
+  let best = i * 24, bestV = -1;
+  for (let h = i * 24; h < i * 24 + 24; h++) {
+    const s = series.at(dateAt(h)), v = s.dust * 3 + s.rain + s.snow * 4 + (s.kind === "hail" ? 9 : 0) + s.gust / 10;
+    if (v > bestV) { bestV = v; best = h; }
+  }
+  hourF = best; $("slider").value = best; show();
+};
+for (const id of ["force", "strength", "wind"]) $(id).oninput = show;
+$("tilt").oninput = e => setTilt(+e.target.value);
+setTilt(30);
+
+function resize() { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener("resize", resize); resize();
+
+let last = performance.now(), frames = 0, fpsT = last, uiT = 0;
+function loop(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (playing && series) {
+    hourF = Math.min(series.hours - 1, hourF + dt);   // 1 hour per second
+    if ((uiT += dt) > 0.1) { uiT = 0; $("slider").value = Math.floor(hourF); show(); }
+  }
+  fx.frame(dt);
+  for (let q = 0; q < 4; q++) marks[q].material.opacity = Math.min(0.9, totals.dust[q] + totals.snow[q] * 0.8 + totals.leaves[q]);
+  controls.update();
+  renderer.render(scene, camera);
+  frames++;
+  if (now - fpsT > 1000) { $("fps").textContent = `${Math.round(frames * 1000 / (now - fpsT))} fps`; frames = 0; fpsT = now; }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+window.__wx = { fx, totals, scene, camera, renderer, setTilt, get series() { return series; }, show, loadRegion, setHour: h => { hourF = h; show(); } };
+loadRegion("cholistan");
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story test page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #1f2328; --mute: #5b636e; --line: #d8dce1; --panel: #ffffff; --accent: #f59e0b; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe0ea; font-family: Inter, Helvetica, sans-serif; color: var(--ink); }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .bar { position: fixed; top: 12px; left: 12px; display: flex; gap: 8px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; font-size: 13px; }
+  .date { position: fixed; top: 12px; right: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; font-size: 13px; }
+  button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: #f6f7f8; color: var(--ink); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1b1300; font-weight: 600; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  #card { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); box-sizing: border-box;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 16px 18px 14px; display: none; }
+  #card h2 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+  #card p { margin: 0 0 12px; font-size: 15px; line-height: 1.45; color: var(--ink); }
+  #card .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  #card .dots { display: flex; gap: 5px; margin-right: auto; }
+  #card .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+  #card .dots i.on { background: var(--accent); }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="bar">
+  <button id="start" class="primary">Start the story</button>
+  <span id="info">fps -</span>
+</div>
+<div class="date" id="date">-</div>
+<div id="card"><h2></h2><p></p><div class="row"><div class="dots"></div><div class="btns row"></div></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module">
+import { createDevScene } from "../js/story/devkit.js";
+import { createStory } from "../js/story/story.js";
+
+const scene = createDevScene(document.getElementById("c"));
+scene.resize(); addEventListener("resize", () => scene.resize());
+scene.setSun(25, 120);
+
+// fake clock: the story sets the date, this page shows it
+const clock = { date: new Date(Date.UTC(2023, 0, 1)), speed: 3600, playing: true, step() {} };
+// fake sim: made-up totals and one made-up sandstorm, only for this test page
+const sim = {
+  regionId: "cholistan",
+  totals: () => new Promise(r => setTimeout(() => r({ trackerKWh: 4.12, fixedKWh: 3.05, idealKWh: 4.31 }), 300)),
+  events: () => [{ date: "2024-05-12", kind: "dust", title: "Sandstorm", strength: 0.9 }],
+};
+// fake HUD card
+const cardEl = document.getElementById("card");
+const hud = {
+  showCard({ title, text, progress, buttons }) {
+    cardEl.style.display = "block";
+    cardEl.querySelector("h2").textContent = title;
+    cardEl.querySelector("p").textContent = text;
+    cardEl.querySelector(".dots").innerHTML = Array.from({ length: progress.count }, (_, i) => `<i class="${i === progress.index ? "on" : ""}"></i>`).join("");
+    const box = cardEl.querySelector(".btns"); box.innerHTML = "";
+    for (const b of buttons) {
+      const el = document.createElement("button");
+      el.textContent = b.label; el.dataset.id = b.id; el.disabled = !!b.disabled;
+      if (b.primary) el.className = "primary";
+      el.onclick = b.onClick; box.append(el);
+    }
+  },
+  hideCard() { cardEl.style.display = "none"; },
+};
+
+const story = createStory({ scene, clock, hud, sim, onExit: mode => { info.textContent = `left the story: ${mode}`; } });
+const info = document.getElementById("info"), dateEl = document.getElementById("date");
+document.getElementById("start").onclick = () => story.start();
+window.__story = { story, scene, clock };
+
+let last = performance.now(), frames = 0, acc = 0, lastDate = "";
+function loop(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  story.frame(dt);
+  scene.frame(dt);
+  frames++; acc += dt;
+  if (acc > 0.5) {
+    window.__fps = frames / acc;
+    if (story.running) info.textContent = `fps ${window.__fps.toFixed(0)} | chapter ${story.chapterIndex + 1}`;
+    frames = 0; acc = 0;
+  }
+  const d = clock.date.toISOString().slice(0, 16).replace("T", " ") + " UTC";
+  if (d !== lastDate) { lastDate = d; dateEl.textContent = d; }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

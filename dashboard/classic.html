@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Solar Tracker</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/console.css">
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div class="brand"><span class="logo"><i data-hi="sun"></i></span><h1>Solar tracker</h1></div>
+    <p class="status" id="status" role="status"></p>
+    <div class="seg" role="group" aria-label="Mode">
+      <button id="modeSim" aria-pressed="true">Simulation</button>
+      <button id="modeLive" aria-pressed="false">Live Arduino</button>
+    </div>
+    <button class="btn dark" id="connect"><i data-hi="usb"></i><span id="connectLabel">Connect</span></button>
+    <details class="more" id="more">
+      <summary class="btn"><i data-hi="more"></i>More</summary>
+      <div class="menu">
+        <button id="relearn">Start the room over <span>(torch off)</span></button>
+        <button id="test">Test the motors</button>
+        <button id="mapLights">Set the 4 light positions <span>(live)</span></button>
+      </div>
+    </details>
+  </header>
+
+  <main class="layout">
+    <section class="card left">
+      <div class="stage" id="stage">
+        <div class="overlay">
+          <span class="pill" id="hudTime"></span>
+          <span class="pill" id="hudPlace"></span>
+        </div>
+        <label class="switch on-stage"><input type="checkbox" id="panOn" checked><span class="knob"></span>Big motor connected</label>
+        <div class="hint">Click a part to see it on the right · drag to look around</div>
+      </div>
+
+      <div class="controls" id="simControls">
+        <div class="regions" id="regions" role="group" aria-label="Region"></div>
+        <div class="row">
+          <div class="seg small" id="seasons" role="group" aria-label="Season"></div>
+          <div class="seg small" id="speeds" role="group" aria-label="Speed"></div>
+          <button class="btn dark play" id="play"></button>
+          <input type="range" id="time" class="grow" min="0" max="24" step="0.01" value="6" aria-label="Time of day">
+          <output id="timeV">06:00</output>
+          <label class="switch"><input type="checkbox" id="simTrack" checked><span class="knob"></span>Tracker</label>
+        </div>
+      </div>
+
+      <div class="controls" id="liveControls" hidden>
+        <div class="row">
+          <label class="switch"><input type="checkbox" id="pretend"><span class="knob"></span>Pretend sun: the real motors follow the simulation</label>
+        </div>
+        <div class="row" id="motorRow" hidden>
+          <span class="ctl-label">Big motor</span>
+          <button class="btn" id="forward" title="Click when the panel faces forward (the front mark points at you)">Facing forward</button>
+          <button class="btn" id="measure" title="Measure the big motor's real speed once">Measure speed</button>
+          <span class="ends" id="measureV"></span>
+          <label class="switch"><input type="checkbox" id="reverse"><span class="knob"></span>Reverse</label>
+        </div>
+        <div class="row" id="sensRow">
+          <span class="ctl-label">Sensitivity</span>
+          <span class="ends">any light</span>
+          <input type="range" id="sens" class="grow" min="0" max="100" step="1" value="50" aria-label="Sensitivity: 0 = any light moves it, 100 = only very bright light">
+          <span class="ends">bright only</span>
+          <output id="sensV">50</output>
+          <span class="state" id="sensState">–</span>
+          <button class="btn" id="learn"><i data-hi="scan"></i><span id="learnLabel">Learn the room</span></button>
+          <button class="btn" id="learnFresh" title="Forget the room and learn it from scratch">Start over</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="right">
+      <nav class="chips" id="partChips" aria-label="Choose a part"></nav>
+      <div class="cards" id="sideCards"></div>
+    </aside>
+  </main>
+</div>
+
+<dialog id="lightSetup" class="dialog" aria-label="Set the 4 light positions">
+  <div class="card-head"><i data-hi="bulb"></i><h2>Set the 4 light positions</h2></div>
+  <div id="lsBody"></div>
+  <div class="ls-actions">
+    <button class="btn" id="lsCancel">Cancel</button>
+    <span style="flex:1"></span>
+    <button class="btn" id="lsBack">Back</button>
+    <button class="btn dark" id="lsNext">Next</button>
+  </div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

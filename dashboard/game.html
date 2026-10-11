@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Solar Tracker</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body data-mode="">
+<canvas id="view" aria-label="The solar tracker in 3D. Drag to turn around it, right drag to move, scroll or pinch to zoom, click a part to see it, double click the ground to come back."></canvas>
+
+<div class="hud">
+  <header class="hud-top">
+    <div class="hud-left" id="hudLeft"></div>
+    <div class="hud-right" id="hudRight"></div>
+  </header>
+
+  <aside class="hud-col" id="col" aria-label="The tracker's parts">
+    <section class="card" id="liveCard" hidden>
+      <div class="card-head"><i data-hi="usb"></i><h2>Arduino</h2></div>
+      <p class="status" id="liveStatus" role="status"></p>
+      <div id="sensRow">
+        <div class="row"><span class="ctl-label">Sensitivity</span><output id="sensV">50</output><span class="state" id="sensState">–</span></div>
+        <div class="row"><span class="ends">any light</span><input type="range" id="sens" class="grow" min="0" max="100" step="1" value="50" aria-label="Sensitivity: 0 = any light moves it, 100 = only very bright light"><span class="ends">bright only</span></div>
+        <div class="row"><button class="btn" id="learn"><i data-hi="scan"></i><span id="learnLabel">Learn the room</span></button><button class="btn" id="learnFresh" title="Forget the room and learn it from scratch">Start over</button></div>
+      </div>
+      <label class="switch" title="The real motors follow the simulated sun; the 4 lights only show what they see"><input type="checkbox" id="pretend"><span class="knob"></span>Pretend sun</label>
+      <div id="motorRow" hidden>
+        <div class="row"><button class="btn" id="forward" title="Click when the panel faces forward (the front mark points at you)">Facing forward</button><button class="btn" id="measure" title="Measure the big motor's real speed once">Measure speed</button></div>
+        <div class="row"><span class="ends" id="measureV"></span></div>
+      </div>
+      <div class="row">
+        <button class="btn dark" id="syncBtn"><i data-hi="check"></i>Sync up</button>
+        <button class="btn" id="test" title="The board sweeps both motors once">Test the motors</button>
+        <button id="mapLights" hidden>Set the 4 light positions</button>
+      </div>
+    </section>
+  </aside>
+
+  <p class="follow-chip" id="followChip" role="status" hidden><i data-hi="usb"></i>Story follows the real tracker</p>
+  <footer class="hud-bottom" id="bottom"></footer>
+  <section class="story-card" id="storyCard" hidden aria-live="polite"></section>
+  <p class="toast" id="toast" role="status" hidden></p>
+</div>
+
+<dialog id="lightSetup" class="dialog side" aria-label="Set the 4 light positions">
+  <div class="card-head"><i data-hi="bulb"></i><h2>Set the 4 light positions</h2></div>
+  <div id="lsBody"></div>
+  <div class="ls-actions">
+    <button class="btn" id="lsCancel">Cancel</button>
+    <span style="flex:1"></span>
+    <button class="btn" id="lsBack">Back</button>
+    <button class="btn dark" id="lsNext">Next</button>
+  </div>
+</dialog>
+
+<dialog id="syncDlg" class="dialog side" aria-label="Sync up">
+  <div class="card-head"><i data-hi="check"></i><h2>Sync up</h2></div>
+  <div id="syncBody"></div>
+  <div class="ls-actions">
+    <button class="btn" id="syncCancel">Cancel</button>
+    <span style="flex:1"></span>
+    <button class="btn dark" id="syncNext" hidden>Next</button>
+  </div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script type="module" src="js/app/app.js"></script>
+</body>
+</html>

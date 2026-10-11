@@ -1,0 +1,159 @@
+/* Story look: the big narration in the middle, small controls at the bottom, and the little
+   "light on the 4 sensors" card of the sandstorm. Loaded at run time by js/hud/storycard.js. */
+
+/* ---- the narration: full screen layer, only the controls catch the mouse ---- */
+#storyCard.sc-big { position: fixed; inset: 0; left: 0; bottom: 0; transform: none; width: auto; padding: 0;
+  background: transparent; border: 0; border-radius: 0; box-shadow: none; pointer-events: none; z-index: 3; }
+#storyCard.sc-big .sc-stage { position: absolute; left: 50%; top: 57%; transform: translateX(-50%);
+  width: min(980px, calc(100vw - 48px)); text-align: center; pointer-events: none; }
+
+#storyCard.sc-big .sc-title { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  font: 600 14px/1 var(--sans); letter-spacing: .04em; text-transform: uppercase; color: #fff;
+  background: rgba(17, 17, 17, .62); padding: 7px 12px 7px 10px; border-radius: 4px;
+  opacity: 0; transform: translateY(6px); transition: opacity .5s ease, transform .5s ease; }
+#storyCard.sc-big .sc-title::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+#storyCard.sc-big .sc-title.in { opacity: 1; transform: none; }
+
+#storyCard.sc-big .sc-line { margin: 0; min-height: 1.4em; color: #fff;
+  font: 600 clamp(21px, 2.25vw, 36px)/1.42 var(--sans); letter-spacing: -.005em;
+  opacity: 0; transform: translateY(8px); transition: opacity .15s ease, transform .15s ease; }   /* = narrate.js FADE */
+#storyCard.sc-big .sc-line.in { opacity: 1; transform: none; }
+#storyCard.sc-big .sc-line.out { opacity: 0; transform: translateY(-6px); }
+#storyCard.sc-big .sc-ink { background: rgba(17, 17, 17, .6); padding: .06em .4em .1em; border-radius: 4px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+#storyCard.sc-big .sc-ink:empty { padding: 0; }
+#storyCard.sc-big .sc-ghost { color: transparent; padding-right: .4em; }
+
+#storyCard.sc-big .sc-big-actions { display: flex; justify-content: center; gap: 10px; margin-top: 26px; flex-wrap: wrap;
+  opacity: 0; transform: translateY(6px); transition: opacity .5s ease, transform .5s ease; pointer-events: none; }
+#storyCard.sc-big .sc-big-actions.in { opacity: 1; transform: none; pointer-events: auto; }
+#storyCard.sc-big .sc-big-actions:empty { display: none; }
+#storyCard.sc-big .btn.sc-choice { font: 600 15px var(--sans); padding: 11px 18px; border-color: var(--ink); }
+#storyCard.sc-big .btn.sc-choice:not(.dark) { background: #fff; }
+
+/* ---- small controls at the bottom ---- */
+#storyCard.sc-big .sc-bar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 5px 6px; pointer-events: auto;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .1); white-space: nowrap; max-width: calc(100vw - 32px); }
+#storyCard.sc-big .sc-bar .btn { height: 28px; padding: 0 10px; font-size: 12.5px; }
+#storyCard.sc-big .sc-bar .btn.ghost { margin-left: 0; }
+#storyCard.sc-big .sc-bar .dots { display: flex; gap: 4px; margin: 0 8px; }
+#storyCard.sc-big .sc-bar .dots i { width: 14px; height: 3px; border-radius: 2px; background: var(--line-2); }
+#storyCard.sc-big .sc-bar .dots i.past { background: var(--ink-2); }
+#storyCard.sc-big .sc-bar .dots i.on { background: var(--accent); }
+#storyCard.sc-big .sc-sound { display: grid; place-items: center; width: 30px; height: 28px; padding: 0; border: 1px solid var(--line-2);
+  border-radius: 4px; background: var(--panel); color: var(--ink); cursor: pointer; }
+#storyCard.sc-big .sc-sound:hover { border-color: var(--ink); }
+#storyCard.sc-big .sc-sound[aria-pressed="false"] { color: var(--faint); }
+
+/* ---- the 4 lights during the sandstorm ---- */
+.story-lights { position: fixed; right: 16px; top: 64px; width: 212px; padding: 10px 12px 12px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 1px 2px rgba(0, 0, 0, .1); font: 13px/1.3 var(--sans);
+  color: var(--ink); opacity: 0; transform: translateY(-6px); transition: opacity .5s ease, transform .5s ease; pointer-events: none; z-index: 2; }
+.story-lights.in { opacity: 1; transform: none; }
+.story-lights h3 { margin: 0 0 8px; font: 600 12px/1.2 var(--sans); color: var(--muted); }
+.story-lights .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.story-lights .tile { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; background: #fff; }
+.story-lights .tile b { display: block; font: 600 18px/1.1 var(--sans); font-variant-numeric: tabular-nums; }
+.story-lights .tile span { font-size: 11px; color: var(--muted); }
+.story-lights .tile i { display: block; height: 3px; margin-top: 5px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.story-lights .tile i::after { content: ""; display: block; height: 100%; width: var(--v, 0%); background: var(--accent); transition: width .2s linear; }
+.story-lights .tile.low b { color: #9a6b2f; }
+.story-lights .tile.low i::after { background: #c9a46a; }
+.story-lights .note { margin-top: 8px; font-size: 12px; color: var(--ink-2); min-height: 1.3em; }
+
+@media (max-width: 640px) {
+  #storyCard.sc-big .sc-stage { top: 54%; width: calc(100vw - 32px); }
+  #storyCard.sc-big .sc-bar { gap: 4px; }
+  #storyCard.sc-big .sc-bar .dots { display: none; }
+  .story-lights { right: 16px; top: 56px; width: 180px; }
+}
+
+/* ---- the presenter's pace: hint under the first sentence, elapsed time in the bar ---- */
+#storyCard.sc-big .sc-line { pointer-events: none; }
+#storyCard.sc-big .sc-line .sc-ink, #storyCard.sc-big .sc-line .sc-ghost { pointer-events: auto; cursor: pointer; }
+#storyCard.sc-big .sc-hint { display: flex; flex-direction: column; align-items: center; gap: 6px; width: max-content; margin: 16px auto 0;
+  font: 500 12px/1.2 var(--sans); color: rgba(255, 255, 255, .82); text-shadow: 0 1px 2px rgba(0, 0, 0, .45); opacity: 0; transition: opacity .5s ease; }
+#storyCard.sc-big .sc-hint:empty { display: none; }
+#storyCard.sc-big .sc-hint-ico { display: grid; place-items: center; width: 28px; height: 28px; box-sizing: border-box; border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, .7); background: rgba(17, 17, 17, .28); color: #fff; }
+#storyCard.sc-big .sc-hint.in { opacity: 1; }
+#storyCard.sc-big .sc-hint.in .sc-hint-ico { animation: sc-pulse 1.8s ease-in-out .6s infinite; }
+@keyframes sc-pulse { 0%, 100% { transform: scale(1); border-color: rgba(255, 255, 255, .7); } 50% { transform: scale(1.08); border-color: rgba(255, 255, 255, .95); } }
+@media (prefers-reduced-motion: reduce) { #storyCard.sc-big .sc-hint.in .sc-hint-ico { animation: none; } }
+#storyCard.sc-big .sc-time { font: 500 12px/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--muted); padding: 0 6px 0 2px; min-width: 32px; }
+
+/* ---- the country card at the top middle: the flag and the name, then 2 or 3 big numbers ---- */
+.story-place { position: fixed; left: 50%; top: 60px; transform: translate(-50%, -8px); width: min(880px, calc(100vw - 32px));
+  padding: 16px 24px 18px; text-align: center; color: #fff; background: rgba(17, 17, 17, .74); border-radius: 4px;
+  font-family: var(--sans); opacity: 0; transition: opacity .5s ease, transform .5s ease; pointer-events: none; z-index: 2; }
+.story-place.in { opacity: 1; transform: translate(-50%, 0); }
+.story-place > * { opacity: 0; transform: translateY(6px); transition: opacity .5s ease, transform .5s ease; }
+.story-place > .in { opacity: 1; transform: none; }
+.story-place .sp-country { display: flex; align-items: center; justify-content: center; gap: 12px; font: 700 clamp(28px, 2.8vw, 40px)/1.1 var(--sans); letter-spacing: -.01em; }
+.story-place .sp-flag { font-size: 1.05em; line-height: 1; }
+.story-place .sp-nums { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 16px; margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, .16); }
+.story-place .sp-num b { display: block; font: 700 clamp(36px, 3.9vw, 56px)/1.05 var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.story-place .sp-num span { display: block; margin-top: 6px; font: 500 clamp(13px, 1.05vw, 15px)/1.3 var(--sans); color: rgba(255, 255, 255, .78); }
+@media (min-width: 1100px) { .story-place .sp-num span { white-space: nowrap; } }
+
+/* the light card as a 2-tile comparison (fixed panel against this tracker) */
+.story-lights.two .grid { grid-template-columns: 1fr 1fr; }
+
+@media (max-width: 640px) {
+  .story-place { top: 52px; padding: 12px 14px 12px; }
+  .story-place .sp-nums { gap: 8px; }
+  .story-place .sp-num b { font-size: 28px; }
+  .story-place .sp-num span { font-size: 11.5px; }
+  .story-lights.two { display: none; }
+}
+
+/* ---- the Sources panel (js/story/sources.js) ---- */
+#storyCard.sc-big .sc-bar .btn.sc-src { margin-left: 0; }
+.story-sources { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(17, 17, 17, .32);
+  opacity: 0; transition: opacity .2s ease; }
+.story-sources.in { opacity: 1; }
+.story-sources .ss-box { width: min(640px, 100%); max-height: min(78vh, 720px); display: flex; flex-direction: column; background: #fff;
+  color: var(--ink, #111); border: 1px solid var(--line, #e5e5e5); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, .18); font: 14px/1.45 var(--sans); }
+.story-sources .ss-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--line, #e5e5e5); }
+.story-sources h2 { margin: 0; font: 600 16px/1.2 var(--sans); }
+.story-sources .ss-close { height: 28px; padding: 0 10px; font-size: 12.5px; }
+.story-sources .ss-list { overflow: auto; padding: 6px 18px 4px; }
+.story-sources section { padding: 10px 0; border-bottom: 1px solid var(--line, #eee); }
+.story-sources section:last-child { border-bottom: 0; }
+.story-sources h3 { margin: 0 0 4px; font: 600 13px/1.3 var(--sans); color: var(--ink-2, #333); }
+.story-sources ul { margin: 0; padding-left: 18px; }
+.story-sources li { margin: 2px 0; color: var(--muted, #666); }
+.story-sources a { color: var(--ink, #111); text-decoration: underline; text-decoration-color: var(--line-2, #ccc); text-underline-offset: 2px; word-break: break-word; }
+.story-sources a:hover { text-decoration-color: var(--accent); }
+.story-sources .ss-foot { margin: 0; padding: 8px 18px 12px; font-size: 12px; color: var(--muted, #666); }
+
+/* ---- the "Auto play" on/off button in the story bar (js/hud/storycard.js kind: "toggle") ---- */
+#storyCard.sc-big .sc-bar .btn.sc-toggle { display: inline-flex; align-items: center; gap: 6px; }
+#storyCard.sc-big .sc-toggle i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--faint); box-sizing: border-box; }
+#storyCard.sc-big .sc-toggle[aria-pressed="true"] { border-color: var(--ink); }
+#storyCard.sc-big .sc-toggle[aria-pressed="true"] i { background: var(--accent); border-color: var(--accent); }
+@media (max-width: 640px) { #storyCard.sc-big .sc-toggle { padding: 0 8px; } }
+
+/* voice speed picker in the story bar */
+#storyCard.sc-big .sc-bar .sc-rate { height: 30px; padding: 0 8px; border: 1px solid #e5e5e5; border-radius: 4px; background: #fff; color: #111; font: inherit; font-size: 13px; }
+
+/* ---- the Play screen and the 3 2 1 countdown (js/story/playscreen.js) ---- */
+#storyCard.sc-big .sc-title:empty { display: none; }
+.story-play { position: fixed; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; pointer-events: none; opacity: 0; transition: opacity .3s ease; }
+.story-play.in { opacity: 1; }
+.story-play .pl-btn { pointer-events: auto; display: grid; place-items: center; width: 72px; height: 72px; padding: 0; box-sizing: border-box;
+  border-radius: 50%; border: 2px solid #fff; background: rgba(17, 17, 17, .28); color: #fff; cursor: pointer;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, .18); transition: background .2s ease, transform .2s ease; animation: pl-pulse 1.8s ease-in-out .6s infinite; }
+.story-play .pl-btn:hover { background: rgba(17, 17, 17, .45); }
+.story-play .pl-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+/* the label hangs under the button, so the button itself sits exactly in the middle of the screen */
+.story-play .pl-label { position: absolute; left: 50%; top: calc(50% + 52px); transform: translateX(-50%); white-space: nowrap;
+  font: 500 15px/1.2 var(--sans); color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.story-play .pl-count { font: 700 clamp(96px, 12vw, 168px)/1 var(--sans); letter-spacing: -.02em; color: #fff; font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .35); animation: pl-pop .35s cubic-bezier(.2, .8, .3, 1.2) both; }
+@keyframes pl-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes pl-pop { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .story-play .pl-btn, .story-play .pl-count { animation: none; } }
