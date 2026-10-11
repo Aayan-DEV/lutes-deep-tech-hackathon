@@ -2,10 +2,10 @@
 
 Our project for the LUTES Deep Tech Hackathon 2026 (demo day: 11 October 2026).
 
-- **Team name:** TODO (team to fill)
+- **Team name:** Wise Guys
 - **Track:** Challenge 02, dual-axis solar tracker
-- **Demo video (2 to 3 min):** TODO (team to fill): add the file to `submission/` and link it here
-- **Pitch deck:** TODO (team to fill): add the file to `submission/` and link it here
+- **Demo video:** [submission/tracker_demo.mp4](submission/tracker_demo.mp4) (25 s: the real tracker following a torch)
+- **Pitch deck:** shown live at the pitch
 
 ![The 3D printing step](dashboard/media/IMG_6999.jpg)
 
@@ -84,11 +84,13 @@ The source notes for each report are in [`research_notes/`](research_notes/).
 
 We are a team of three:
 
-1. Business: TODO (team to fill: name)
-2. Software engineer: Aayan TODO (team to fill: confirm role and full name)
-3. Electrical engineer: TODO (team to fill: name)
+1. Aayan
+2. Gauravan
+3. Togo
 
-During the hackathon we learned 3D printing, spray painting, wood cutting and screwing. The JHC lab mentors and AI mentors helped us.
+One of us works on business, one on software and one on electronics.
+
+During the hackathon we learned 3D printing, spray painting, wood cutting and screwing. The JHC lab mentors helped us.
 
 ## Repo map
 
